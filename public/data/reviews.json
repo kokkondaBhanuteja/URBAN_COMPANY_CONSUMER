@@ -1,0 +1,14 @@
+[
+  {
+    "user": "Priya S.",
+    "rating": 5,
+    "text": "Excellent service! The professional was punctual and did an amazing job. Will definitely book again.",
+    "createdAt": "2024-01-15"
+  },
+  {
+    "user": "Rahul M.",
+    "rating": 4,
+    "text": "Good quality service. The technician was knowledgeable and fixed the issue quickly.",
+    "createdAt": "2024-01-10"
+  }
+]

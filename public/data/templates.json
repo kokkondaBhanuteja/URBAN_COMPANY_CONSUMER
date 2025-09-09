@@ -1,0 +1,15 @@
+[
+  {
+    "id": "uc-promise",
+    "type": "promise",
+    "title": "The UC Promise",
+    "subtitle": "What makes us different",
+    "bodyHtml": "<p>We ensure quality service delivery through our rigorous partner selection and training process.</p>",
+    "bullets": [
+      "Transparent Pricing - No hidden charges",
+      "Experts Only - Skilled professionals",
+      "Fully Equipped - All tools provided",
+      "100% Quality Assured - Satisfaction guaranteed"
+    ]
+  }
+]

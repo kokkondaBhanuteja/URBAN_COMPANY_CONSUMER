@@ -1,0 +1,44 @@
+[
+  {
+    "id": "womens-salon-spa",
+    "slug": "womens-salon-spa",
+    "title": "Women's Salon & Spa",
+    "image": "/images/categories/womens-salon.jpg",
+    "description": "Beauty services at your doorstep"
+  },
+  {
+    "id": "mens-salon-massage",
+    "slug": "mens-salon-massage",
+    "title": "Men's Salon & Massage",
+    "image": "/images/categories/mens-salon.jpg",
+    "description": "Grooming services for men"
+  },
+  {
+    "id": "ac-appliance-repair",
+    "slug": "ac-appliance-repair",
+    "title": "AC & Appliance Repair",
+    "image": "/images/categories/ac-repair.jpg",
+    "description": "Expert repair services"
+  },
+  {
+    "id": "cleaning-pest-control",
+    "slug": "cleaning-pest-control",
+    "title": "Cleaning & Pest Control",
+    "image": "/images/categories/cleaning.jpg",
+    "description": "Deep cleaning and pest solutions"
+  },
+  {
+    "id": "electrician-plumber-carpenter",
+    "slug": "electrician-plumber-carpenter",
+    "title": "Electrician, Plumber & Carpenter",
+    "image": "/images/categories/electrician.jpg",
+    "description": "Home maintenance experts"
+  },
+  {
+    "id": "native-water-purifier",
+    "slug": "native-water-purifier",
+    "title": "Native Water Purifier",
+    "image": "/images/categories/water-purifier.jpg",
+    "description": "Water purification solutions"
+  }
+]
