@@ -1,48 +1,92 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Header } from "@/components/layout/header"
+import { useRouter } from "next/navigation"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { User, Calendar, MapPin, Mail } from "lucide-react"
+import { User, Calendar, MapPin, Mail, LogOut, Settings, ShieldCheck } from "lucide-react"
+import { authService } from "@/lib/auth"
+import { Skeleton } from "@/components/ui/skeleton"
+import Link from "next/link"
 
 interface UserProfile {
-  id: string
-  name: string
-  email: string
+  consumer: {
+    userId: {
+      _id: string
+      userName: string
+      email: string
+      mobileNumber: string
+    }
+    address?: {
+      addressLine1: string
+      city: string
+      pincode: string
+      state: string
+    }
+  }
+  addresses: any[]
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
-    // Load user from localStorage (mock)
-    const userData = localStorage.getItem("uc-user")
-    if (userData) {
-      setUser(JSON.parse(userData))
-    }
-    setLoading(false)
-  }, [])
+    const fetchProfile = async () => {
+      if (!authService.isAuthenticated()) {
+        router.push("/login")
+        return
+      }
 
-  const handleLogout = () => {
-    localStorage.removeItem("uc-user")
-    window.location.href = "/login"
+      try {
+        const response = await fetch("/api/consumer/profile", {
+          credentials: "include",
+        })
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            authService.logout()
+            router.push("/login?error=Session expired")
+            return
+          }
+          throw new Error("Failed to fetch profile data.")
+        }
+
+        const data = await response.json()
+        setProfile(data)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [router])
+
+  const handleLogout = async () => {
+    await authService.logout()
+    router.push("/login")
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header />
+      <div className="min-h-screen bg-background">
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-1/3 mb-8"></div>
+              <Skeleton className="h-8 rounded w-1/3 mb-2" />
+              <Skeleton className="h-4 rounded w-1/2 mb-8" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-200 rounded-lg h-64"></div>
-                <div className="bg-gray-200 rounded-lg h-64"></div>
+                <Skeleton className="rounded-lg h-64" />
+                <Skeleton className="rounded-lg h-64" />
               </div>
+              <Skeleton className="rounded-lg h-40 mt-6" />
             </div>
           </div>
         </main>
@@ -51,38 +95,52 @@ export default function ProfilePage() {
     )
   }
 
-  if (!user) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header />
-        <main className="py-16">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Please Sign In</h1>
-            <p className="text-gray-600 mb-8">You need to be logged in to view your profile.</p>
-            <Button className="bg-uc-purple hover:bg-uc-purple-dark text-white">
-              <a href="/login">Sign In</a>
-            </Button>
-          </div>
-        </main>
-        <Footer />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-destructive">Error</h2>
+          <p className="text-muted-foreground mt-2">{error}</p>
+          <Button onClick={() => router.push("/")} className="mt-4">
+            Go to Homepage
+          </Button>
+        </div>
       </div>
     )
   }
 
+  if (!profile?.consumer) {
+    // This case will likely be handled by the auth check, but it's good practice.
+    return (
+       <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Profile Not Found</h2>
+          <p className="text-muted-foreground mt-2">Could not find your profile information.</p>
+          <Button onClick={handleLogout} className="mt-4">
+            Login Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const { consumer } = profile
+  const mainAddress = consumer.address || (profile.addresses.length > 0 ? profile.addresses[0] : null)
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <div className="min-h-screen bg-muted/40">
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-gray-600 mt-2">Manage your account and bookings</p>
+            <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+            <p className="text-muted-foreground mt-2">Manage your account and bookings</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Profile Information */}
-            <Card>
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <User className="w-5 h-5" />
@@ -91,26 +149,29 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Mail className="w-4 h-4 text-gray-400" />
+                  <User className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{consumer.userId.userName}</p>
+                  </div>
+                </div>
+                 <div className="flex items-center space-x-3">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{consumer.userId.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <User className="w-4 h-4 text-gray-400" />
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium">{user.name}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Location</p>
-                    <p className="font-medium">Dadar, Mumbai</p>
+                    <p className="text-sm text-muted-foreground">Primary Address</p>
+                    <p className="font-medium">
+                      {mainAddress
+                        ? `${mainAddress.addressLine1}, ${mainAddress.city}, ${mainAddress.state} - ${mainAddress.pincode}`
+                        : "No address set"}
+                    </p>
                   </div>
                 </div>
 
@@ -122,41 +183,43 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Recent Bookings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5" />
-                  <span>Recent Bookings</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">No bookings yet</p>
-                  <p className="text-sm text-gray-500">
-                    Your service bookings will appear here once you make your first booking.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Account Actions */}
+            <div className="space-y-6">
+               <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-base">
+                     <ShieldCheck className="w-5 h-5" />
+                     <span>Account</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col space-y-2">
+                    <Button variant="ghost" className="justify-start">Change Password</Button>
+                    <Button variant="ghost" className="justify-start">Notification Settings</Button>
+                </CardContent>
+              </Card>
+              <Card>
+                 <CardHeader>
+                    <CardTitle className="flex items-center space-x-2 text-base">
+                        <Calendar className="w-5 h-5" />
+                        <span>My Bookings</span>
+                    </CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                     <p className="text-sm text-muted-foreground mb-4">View your past and upcoming service bookings.</p>
+                     <Button variant="outline" className="w-full" asChild>
+                         <Link href="/bookings">View All Bookings</Link>
+                     </Button>
+                 </CardContent>
+              </Card>
 
-          {/* Account Actions */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Account Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="outline">Change Password</Button>
-                <Button variant="outline">Notification Settings</Button>
-                <Button variant="destructive" onClick={handleLogout}>
-                  Sign Out
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+               <div>
+                 <Button variant="destructive" onClick={handleLogout} className="w-full">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+               </div>
+            </div>
+          </div>
         </div>
       </main>
 

@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Header } from "@/components/layout/header"
+import { useRouter } from "next/navigation"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { DashboardStats } from "@/components/consumer/dashboard-stats"
 import { RecentBookings } from "@/components/consumer/recent-bookings"
 import { QuickActions } from "@/components/consumer/quick-actions"
 import { authService } from "@/lib/auth"
-import { useRouter } from "next/navigation"
+import { Skeleton } from "@/components/ui/skeleton"
+
 
 interface DashboardData {
   upcomingBookings: number
@@ -25,20 +27,24 @@ export default function ConsumerDashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // Check if user is authenticated client-side first
+      if (!authService.isAuthenticated()) {
+        router.push("/login")
+        return
+      }
+
       try {
-        // Check if user is authenticated
-        if (!authService.isAuthenticated()) {
-          router.push("/login")
+        // Fetch data from the server. The browser will automatically send the auth cookie.
+        const response = await fetch("/api/consumer/dashboard", {
+          credentials: "include", // This is crucial for sending httpOnly cookies
+        })
+
+        if (response.status === 401) {
+          // If the cookie is invalid or expired, the server will tell us.
+          authService.logout()
+          router.push("/login?error=Session expired. Please log in again.")
           return
         }
-
-        const token = authService.getAuthToken()
-        const response = await fetch("/api/consumer/dashboard", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
 
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data")
@@ -60,19 +66,19 @@ export default function ConsumerDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <NavigationHeader />
         <main className="py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-muted rounded w-1/3"></div>
+            <div className="space-y-6">
+              <Skeleton className="h-8 rounded w-1/3" />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-muted rounded-lg h-32"></div>
+                  <Skeleton key={i} className="rounded-lg h-32" />
                 ))}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-muted rounded-lg h-64"></div>
-                <div className="bg-muted rounded-lg h-64"></div>
+                <Skeleton className="rounded-lg h-64" />
+                <Skeleton className="rounded-lg h-64" />
               </div>
             </div>
           </div>
@@ -85,7 +91,7 @@ export default function ConsumerDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+     <NavigationHeader />
         <main className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Dashboard</h1>
@@ -104,14 +110,14 @@ export default function ConsumerDashboard() {
   }
 
   if (!dashboardData) {
-    return null
+    return null // or a fallback component
   }
 
   const user = authService.getUser()
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

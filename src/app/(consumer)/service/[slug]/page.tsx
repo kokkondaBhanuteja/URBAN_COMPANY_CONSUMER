@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import { Star, MapPin } from "lucide-react"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -55,7 +55,7 @@ export default function ServicePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="animate-pulse">
@@ -79,7 +79,7 @@ export default function ServicePage() {
   if (!service) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Service Not Found</h1>
@@ -93,7 +93,7 @@ export default function ServicePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

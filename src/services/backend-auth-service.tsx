@@ -2,24 +2,19 @@ import jwt from "jsonwebtoken"
 import User from "@/database/userModel"
 import Consumer from "@/database/consumerModel"
 import Otp from "@/database/otpModel"
-import * as nodemailer from "nodemailer"
+import { sendOtp } from "./otp-service" // <-- IMPORT the centralized function
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "2h"
 
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-})
+// The nodemailer transporter is now removed from this file.
 
 export async function loginUser(email: string, password: string, userType: string) {
+  // ... existing code ...
   try {
     // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() })
+    const user = await User.findOne({ email: email.toLowerCase(), userType });
+
     if (!user) {
       throw new Error("Invalid email or password")
     }
@@ -62,6 +57,7 @@ export async function loginUser(email: string, password: string, userType: strin
 }
 
 export async function registerConsumer(userData: {
+  // ... existing code ...
   userName: string
   email: string
   mobileNumber: string
@@ -76,6 +72,7 @@ export async function registerConsumer(userData: {
   }
 }) {
   try {
+    // ... existing code ...
     // Check if user already exists
     const existingUser = await User.findOne({
       $or: [{ email: userData.email.toLowerCase() }, { mobileNumber: userData.mobileNumber }],
@@ -109,8 +106,8 @@ export async function registerConsumer(userData: {
 
     await newConsumer.save()
 
-    // Generate and send OTP
-    await generateAndSendOTP(userData.email)
+    // Generate and send OTP using the centralized service
+    await sendOtp(userData.email) // <-- USE the imported function
 
     return {
       _id: newUser._id,
@@ -124,50 +121,10 @@ export async function registerConsumer(userData: {
   }
 }
 
-export async function generateAndSendOTP(email: string) {
-  try {
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
-
-    // Delete any existing OTP for this email
-    await Otp.deleteMany({ email: email.toLowerCase() })
-
-    // Save new OTP
-    const newOtp = new Otp({
-      email: email.toLowerCase(),
-      otp,
-    })
-    await newOtp.save()
-
-    // Send OTP via email
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: email,
-      subject: "Urban Company - Email Verification",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0e0e0e;">Welcome to Urban Company!</h2>
-          <p>Thank you for registering with us. Please use the following OTP to verify your email address:</p>
-          <div style="background-color: #f0f0f0; padding: 20px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #0e0e0e; font-size: 32px; margin: 0;">${otp}</h1>
-          </div>
-          <p>This OTP will expire in 10 minutes.</p>
-          <p>If you didn't request this verification, please ignore this email.</p>
-          <hr style="margin: 30px 0;">
-          <p style="color: #666; font-size: 12px;">Urban Company - Quality home services at your doorstep</p>
-        </div>
-      `,
-    }
-
-    await transporter.sendMail(mailOptions)
-    return { success: true }
-  } catch (error) {
-    console.error("Error sending OTP:", error)
-    throw new Error("Failed to send OTP. Please try again.")
-  }
-}
+// The generateAndSendOTP function is now removed from this file.
 
 export async function verifyOTP(email: string, otp: string) {
+  // ... existing code ...
   try {
     const otpRecord = await Otp.findOne({
       email: email.toLowerCase(),
@@ -194,6 +151,7 @@ export async function loginWithGoogle(
     email: string
   },
 ) {
+  // ... existing code ...
   try {
     // Check if user exists with Google ID
     let user = await User.findOne({ googleId })

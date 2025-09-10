@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { ServiceCard } from "@/components/content/service-card"
 import { getCategory, getServices, type Category, type Service } from "@/lib/content"
@@ -35,7 +35,7 @@ export default function CategoryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="animate-pulse">
@@ -56,7 +56,7 @@ export default function CategoryPage() {
   if (!category) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Category Not Found</h1>
@@ -70,7 +70,7 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

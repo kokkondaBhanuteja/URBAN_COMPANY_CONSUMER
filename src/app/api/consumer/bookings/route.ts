@@ -1,14 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { cookieAuthMiddleware } from "@/middlewares/cookieAuthMiddleware"
-import { connectDb } from "@/lib/dbConnect"
+import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
 import Booking from "@/database/bookingModel"
+import { connectDb } from "@/lib/dbConnect"
 import { Types } from "mongoose"
 
 export async function GET(req: NextRequest) {
   await connectDb()
 
   try {
-    const headersWithUser = await cookieAuthMiddleware(req)
+    const headersWithUser = await consumerMiddleware(req)
     const userId = headersWithUser.get("x-user-id")
 
     if (!userId) {
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   await connectDb()
 
   try {
-    const headersWithUser = await cookieAuthMiddleware(req)
+    const headersWithUser = await consumerMiddleware(req)
     const userId = headersWithUser.get("x-user-id")
 
     if (!userId) {
