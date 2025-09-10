@@ -1,23 +1,27 @@
-import { NextRequest } from 'next/server';
-import passport from '@/lib/passport';
-
+import { type NextRequest, NextResponse } from "next/server"
 export async function GET(req: NextRequest) {
-    const authenticate = passport.authenticate('google', { scope: ['profile', 'email'] });
-    // This is a bit of a workaround to make passport work in this environment
-    const res = new Response();
-    const result = await new Promise((resolve, reject) => {
-        const reqWithNext = Object.assign(req, {
-            // passport expects a `next` function
-            next: (err?: Error) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(res);
-                }
-            },
-        });
-        authenticate(reqWithNext, res);
-    });
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID
+    const redirectUri = `${req.nextUrl.origin}/api/auth/google/callback`
 
-    return result as Response;
+    if (!clientId) {
+      throw new Error("Google Client ID not configured")
+    }
+
+    const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth")
+    googleAuthUrl.searchParams.set("client_id", clientId)
+    googleAuthUrl.searchParams.set("redirect_uri", redirectUri)
+    googleAuthUrl.searchParams.set("response_type", "code")
+    googleAuthUrl.searchParams.set("scope", "profile email")
+    googleAuthUrl.searchParams.set("access_type", "offline")
+    googleAuthUrl.searchParams.set("prompt", "consent")
+
+    return NextResponse.redirect(googleAuthUrl.toString())
+  } catch (error) {
+    console.error("Google Auth Error:", error)
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred"
+    const loginUrl = new URL("/login", req.url)
+    loginUrl.searchParams.set("error", `Authentication failed: ${errorMessage}`)
+    return NextResponse.redirect(loginUrl)
+  }
 }

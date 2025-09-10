@@ -2,7 +2,7 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 
 // Booking interface
 export interface IBooking extends Document {
-  consumerId: Types.ObjectId; // Changed back to consumerId
+  userId: Types.ObjectId;
   providerId?: Types.ObjectId | null;
   serviceId: Types.ObjectId;
 
@@ -26,7 +26,10 @@ export interface IBooking extends Document {
   startedAt?: Date;
   completedAt?: Date;
 
-  totalPrice: number;
+  pricing: {
+    basePrice: number;
+    finalAmount: number;
+  };
   specialInstructions?: string;
 
   discountId?: Types.ObjectId;
@@ -37,7 +40,7 @@ export interface IBooking extends Document {
 
 const bookingSchema = new Schema<IBooking>(
   {
-    consumerId: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Changed back to consumerId
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     providerId: { type: Schema.Types.ObjectId, ref: "Provider" }, // Nullable
     serviceId: { type: Schema.Types.ObjectId, ref: "Service", required: true },
 
@@ -67,7 +70,10 @@ const bookingSchema = new Schema<IBooking>(
     startedAt: { type: Date },
     completedAt: { type: Date },
 
-    totalPrice: { type: Number, required: true },
+    pricing: {
+      basePrice: { type: Number, required: true },
+      finalAmount: { type: Number, required: true },
+    },
     specialInstructions: { type: String },
 
     discountId: { type: Schema.Types.ObjectId, ref: "Discount" },
@@ -76,7 +82,7 @@ const bookingSchema = new Schema<IBooking>(
 );
 
 // Indexes for efficient queries
-bookingSchema.index({ consumerId: 1 }); // Changed back to consumerId
+bookingSchema.index({ userId: 1 });
 bookingSchema.index({ providerId: 1 });
 
 const Booking =mongoose.models.Booking || mongoose.model<IBooking>("Booking", bookingSchema);

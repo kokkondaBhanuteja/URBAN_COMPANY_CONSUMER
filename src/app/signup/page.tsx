@@ -1,48 +1,98 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { ConsumerAuthForm } from "@/components/auth/consumer-auth-form"
-import { authService } from "@/lib/auth"
+import { OtpForm } from "@/components/auth/otp-form"
+import { authService } from "@/services/authService"
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [step, setStep] = useState(1)
+  const [userData, setUserData] = useState<any>(null)
   const router = useRouter()
 
   const handleSignup = async (data: any) => {
     setLoading(true)
     setError("")
+    setUserData(data)
 
     try {
-      await authService.register(data);
-
-      // After successful registration, automatically log them in
-      const loginResponse = await authService.login(data.email, data.password);
-
-      // Store auth data
-      authService.setAuthToken(loginResponse.token);
-      authService.setUser(loginResponse.user);
-
-      // Redirect to home page
-      router.push("/");
+      await authService.register(data)
+      setStep(2) // Move to OTP step
     } catch (error: any) {
-      setError(error.message || "Registration failed. Please try again.");
+      setError(error.message || "Registration failed. Please try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
+  }
+
+  const handleOtpSubmit = async (otp: string) => {
+    setLoading(true)
+    setError("")
+    try {
+      const response = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: userData.email, otp }),
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "OTP verification failed")
+      }
+
+      // After successful OTP verification, automatically log them in
+      await authService.login(userData.email, userData.password)
+
+      // Redirect to dashboard page
+      router.push("/dashboard")
+    } catch (error: any) {
+      setError(error.message || "OTP verification failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBackToRegistration = () => {
+    setStep(1)
+    setError("")
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
-          <ConsumerAuthForm mode="signup" onSubmit={handleSignup} loading={loading} error={error} />
+          {step === 1 && <ConsumerAuthForm mode="signup" onSubmit={handleSignup} loading={loading} error={error} />}
+
+          {step === 2 && (
+            <>
+              <OtpForm email={userData.email} onSubmit={handleOtpSubmit} loading={loading} error={error} />
+
+              <div className="mt-4 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackToRegistration}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ← Back to Registration
+                </Button>
+              </div>
+            </>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">

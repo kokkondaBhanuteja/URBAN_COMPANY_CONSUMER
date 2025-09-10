@@ -2,6 +2,14 @@ import mongoose, { type Document, Schema, type Types } from "mongoose"
 
 export interface IConsumer extends Document {
   userId: Types.ObjectId // Ref to User
+  address?: {
+    addressLine1: string
+    city: string
+    pincode: string
+    state: string
+    country: string
+    addressType: "home" | "work" | "other"
+  }
   preferredCategories: Types.ObjectId[] // Ref to ServiceCategory
   totalBookings: number
   averageRating: number // Rating given by providers
@@ -19,6 +27,18 @@ const consumerSchema = new Schema<IConsumer>(
       ref: "User",
       required: true,
       unique: true,
+    },
+    address: {
+      addressLine1: { type: String },
+      city: { type: String },
+      pincode: { type: String },
+      state: { type: String },
+      country: { type: String, default: "India" },
+      addressType: {
+        type: String,
+        enum: ["home", "work", "other"],
+        default: "home",
+      },
     },
     preferredCategories: [{ type: Schema.Types.ObjectId, ref: "ServiceCategory" }],
     totalBookings: { type: Number, default: 0 },

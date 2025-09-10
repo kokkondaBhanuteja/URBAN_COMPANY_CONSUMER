@@ -4,7 +4,7 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,7 +12,6 @@ import { PaymentSheet } from "@/components/commerce/payment-sheet"
 import { AuthGuard } from "@/components/consumer/auth-guard"
 import { BookingForm } from "@/components/consumer/booking-form"
 import { useCart } from "@/lib/cart-context"
-import { authService } from "@/lib/auth"
 import type { PaymentResult } from "@/lib/payments"
 
 export default function CartPage() {
@@ -39,26 +38,19 @@ export default function CartPage() {
   }
 
   const handleProceedToBooking = () => {
-    if (!authService.isAuthenticated()) {
-      setShowBookingForm(true) // This will trigger AuthGuard
-      return
-    }
     setShowBookingForm(true)
   }
 
   const handleBookingSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      const token = authService.getAuthToken()
-
-      // Create booking for the first service (in a real app, you might handle multiple services differently)
       const firstItem = items[0]
       const response = await fetch("/api/consumer/bookings", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        credentials: "include", // Use cookies instead of Authorization header
         body: JSON.stringify({
           serviceId: firstItem.serviceId,
           serviceAddress: formData.serviceAddress,
@@ -103,7 +95,7 @@ export default function CartPage() {
   if (showCheckout) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <PaymentSheet
@@ -123,7 +115,7 @@ export default function CartPage() {
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <NavigationHeader />
         <main className="py-8">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-6">
@@ -151,12 +143,12 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <NavigationHeader />
         <main className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="py-12">
               <ShoppingBag className="w-24 h-24 text-muted-foreground mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-foreground mb-4 text-balance">Your cart is empty</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-4 text-balance">Your cart is empty</h1>
               <p className="text-muted-foreground mb-8 text-pretty">Add some services to get started</p>
               <Link href="/">
                 <Button>Browse Services</Button>
@@ -171,7 +163,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

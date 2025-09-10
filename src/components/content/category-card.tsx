@@ -8,6 +8,7 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ category }: CategoryCardProps) {
+  console.log(category)
   return (
     <Link href={`/category/${category.slug}`}>
       <Card className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-gray-200 hover:border-uc-purple hover:-translate-y-1">

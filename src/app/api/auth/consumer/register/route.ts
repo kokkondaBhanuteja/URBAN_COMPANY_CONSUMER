@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { registerConsumer } from "@/services/authService"
+import { registerConsumer } from "@/services/backend-auth-service"
 import { connectDb } from "@/lib/dbConnect"
 
 export async function POST(req: NextRequest) {

@@ -5,9 +5,10 @@ export interface IService extends Document {
   serviceName: string;
   description?: string;
   basePrice: number;
-  iconUrl?: string;
   priceUnit: "fixed" | "hourly" | "per_item";
+  durationMinutes?: number;
   isActive: boolean;
+  imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,8 +28,9 @@ const serviceSchema = new Schema<IService>(
       enum: ["fixed", "hourly", "per_item"],
       required: true,
     },
-    iconUrl: { type: String },
+    durationMinutes: { type: Number },
     isActive: { type: Boolean, default: true },
+    imageUrl: { type: String },
   },
   { timestamps: true }
 );

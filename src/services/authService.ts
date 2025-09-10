@@ -1,64 +1,109 @@
-// src/services/authService.ts
-import User, { type IUser } from "@/database/userModel"
-import jwt from "jsonwebtoken"
-import type { Types } from "mongoose"
-import { createConsumerProfile } from "@/services/consumer/consumerService"
-
-interface ConsumerRegisterParams {
-  userName: string
+interface User {
+  id: string
+  fullName: string
   email: string
-  password: string
-  mobileNumber: string
-  address?: {
-    addressLine1: string
-    city: string
-    pincode: string
-    state: string
-    country?: string
-    addressType?: "home" | "work" | "other"
-  }
+  userType: string
 }
 
-export const registerConsumer = async (data: ConsumerRegisterParams): Promise<IUser> => {
-  const { userName, email, password, mobileNumber, address } = data
-
-  // Step 1: Save User as consumer
-  const user = new User({
-    userName,
-    email,
-    password,
-    mobileNumber,
-    userType: "consumer",
-  })
-  await user.save()
-
-  // Step 2: Create consumer profile and address
-  await createConsumerProfile(user._id.toString(), address)
-
-  return user
+interface AuthResponse {
+  user: User
 }
 
-export const loginUser = async (email: string, password?: string, userType?: string) => {
-  const user = await User.findOne({ email })
-  if (!user) {
-    throw new Error("Invalid email or password")
-  }
+export const authService = {
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await fetch("/api/auth/consumer/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      credentials: "include", // Include cookies for authentication
+    })
 
-  if (userType && user.userType !== userType) {
-    throw new Error("You are not authorized to access this page")
-  }
+    const data = await response.json()
 
-  if (password) {
-    const isMatch = await user.comparePassword(password)
-    if (!isMatch) {
-      throw new Error("Invalid email or password")
+    if (!response.ok) {
+      throw new Error(data.message || "Login failed")
     }
-  }
 
-  const token = jwt.sign(
-    { id: user._id, userType: user.userType, name: user.userName },
-    process.env.JWT_SECRET as string,
-    { expiresIn: "1h" },
-  )
-  return { token, user }
+    this.setUser(data.user)
+    return data
+  },
+
+  async register(userData: any): Promise<{ message: string; userId: string; userType: string }> {
+    const response = await fetch("/api/auth/consumer/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+      credentials: "include", // Include cookies for authentication
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || "Registration failed")
+    }
+
+    return data
+  },
+
+  async resendOTP(email: string): Promise<{ message: string }> {
+    const response = await fetch("/api/auth/otp/resend", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to resend OTP")
+    }
+
+    return data
+  },
+
+  setUser(user: User) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("uc-user", JSON.stringify(user))
+      window.dispatchEvent(new Event("authChange")) // Dispatch event
+    }
+  },
+
+  getUser(): User | null {
+    if (typeof window === "undefined") return null
+    const userStr = localStorage.getItem("uc-user")
+    return userStr ? JSON.parse(userStr) : null
+  },
+
+  getAuthToken(): string | null {
+    // Since we're using cookie-based auth, we don't need to return a token
+    // The cookie will be sent automatically with requests
+    return null
+  },
+
+  async logout() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Logout API error:", error)
+    } finally {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("uc-user")
+        window.dispatchEvent(new Event("authChange")) // Dispatch event
+      }
+    }
+  },
+
+  isAuthenticated(): boolean {
+    return !!this.getUser()
+  },
 }

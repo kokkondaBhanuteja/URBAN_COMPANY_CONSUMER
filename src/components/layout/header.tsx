@@ -1,251 +1,310 @@
 "use client"
 
-import Link from "next/link"
-import { Search, MapPin, ShoppingCart, User, Menu, X, LogOut } from "lucide-react"
+import type React from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useCart } from "@/lib/cart-context"
-import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from "react"
-import { authService } from "@/lib/auth"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export function Header() {
-  const { totalItems } = useCart()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
+interface ConsumerAuthFormProps {
+  mode: "login" | "signup"
+  onSubmit: (data: any) => void
+  loading?: boolean
+  error?: string
+}
 
-  useEffect(() => {
-    const checkAuth = () => {
-      if (authService.isAuthenticated()) {
-        setUser(authService.getUser())
-      } else {
-        setUser(null)
+export function Header({ mode, onSubmit, loading = false, error }: ConsumerAuthFormProps) {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    userName: "",
+    mobileNumber: "",
+    address: {
+      addressLine1: "",
+      city: "",
+      pincode: "",
+      state: "",
+      country: "India",
+      addressType: "home" as "home" | "work" | "other",
+    },
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.email) {
+      newErrors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email"
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required"
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters"
+    }
+
+    if (mode === "signup") {
+      if (!formData.userName) {
+        newErrors.userName = "Name is required"
+      }
+      if (!formData.mobileNumber) {
+        newErrors.mobileNumber = "Mobile number is required"
+      } else if (!/^\d{10}$/.test(formData.mobileNumber)) {
+        newErrors.mobileNumber = "Please enter a valid 10-digit mobile number"
+      }
+      if (!formData.address.addressLine1) {
+        newErrors.addressLine1 = "Address is required"
+      }
+      if (!formData.address.city) {
+        newErrors.city = "City is required"
+      }
+      if (!formData.address.pincode) {
+        newErrors.pincode = "Pincode is required"
+      }
+      if (!formData.address.state) {
+        newErrors.state = "State is required"
       }
     }
 
-    checkAuth()
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
-    // Listen for storage changes (login/logout in other tabs)
-    const handleStorageChange = () => {
-      checkAuth()
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validateForm()) {
+      if (mode === "login") {
+        onSubmit({
+          email: formData.email,
+          password: formData.password,
+        })
+      } else {
+        onSubmit(formData)
+      }
     }
+  }
 
-    window.addEventListener("storage", handleStorageChange)
-    return () => window.removeEventListener("storage", handleStorageChange)
-  }, [])
-
-  const handleLogout = () => {
-    authService.logout()
-    setUser(null)
-    window.location.href = "/"
+  const updateFormData = (field: string, value: string) => {
+    if (field.startsWith("address.")) {
+      const addressField = field.split(".")[1]
+      setFormData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [addressField]: value,
+        },
+      }))
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }))
+    }
   }
 
   return (
-    <header className="bg-background border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">UC</span>
+    <Card className="w-full max-w-lg mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold text-balance">
+          {mode === "login" ? "Welcome Back" : "Join Urban Company"}
+        </CardTitle>
+        <p className="text-muted-foreground text-pretty">
+          {mode === "login" ? "Sign in to book services" : "Create your account to get started"}
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+              {error}
             </div>
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold text-foreground">Urban</span>
-              <span className="text-xl font-bold text-primary ml-1">Company</span>
-            </div>
-          </Link>
+          )}
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-8">
-            <Link
-              href="/category/womens-salon-spa"
-              className="text-muted-foreground hover:text-primary font-medium transition-colors"
-            >
-              Beauty
-            </Link>
-            <Link
-              href="/category/ac-appliance-repair"
-              className="text-muted-foreground hover:text-primary font-medium transition-colors"
-            >
-              Revamp
-            </Link>
-            <Link
-              href="/category/native-water-purifier"
-              className="text-muted-foreground hover:text-primary font-medium transition-colors"
-            >
-              Native
-            </Link>
-          </nav>
-
-          {/* Location Selector - Hidden on mobile */}
-          <div className="hidden xl:flex items-center space-x-2 text-muted-foreground">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">Dadar, Mumbai</span>
-          </div>
-
-          {/* Search Bar - Hidden on mobile, shown on tablet+ */}
-          <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input type="text" placeholder="Search for 'Facial'" className="pl-10 pr-4 py-2 w-full" />
-            </div>
-          </div>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center space-x-2">
-            {/* Mobile Search Button */}
-            <Button variant="ghost" size="sm" className="p-2 md:hidden">
-              <Search className="w-5 h-5" />
-            </Button>
-
-            {/* Cart */}
-            <Link href="/cart" className="relative">
-              <Button variant="ghost" size="sm" className="p-2">
-                <ShoppingCart className="w-5 h-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs min-w-[1.25rem] h-5 flex items-center justify-center rounded-full">
-                    {totalItems}
-                  </Badge>
-                )}
-              </Button>
-            </Link>
-
-            {/* Profile - Updated to show user info or login */}
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-2 hidden sm:flex">
-                    <User className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/consumer/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/consumer/bookings">My Bookings</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/consumer/profile">Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Link href="/login" className="hidden sm:block">
-                <Button variant="ghost" size="sm" className="p-2">
-                  <User className="w-5 h-5" />
-                </Button>
-              </Link>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 lg:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t py-4 space-y-4">
-            {/* Mobile Search */}
-            <div className="md:hidden">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input type="text" placeholder="Search for 'Facial'" className="pl-10 pr-4 py-2 w-full" />
+          {mode === "signup" && (
+            <>
+              <div>
+                <Label htmlFor="userName">Full Name</Label>
+                <Input
+                  id="userName"
+                  type="text"
+                  value={formData.userName}
+                  onChange={(e) => updateFormData("userName", e.target.value)}
+                  placeholder="Enter your full name"
+                  className={errors.userName ? "border-destructive" : ""}
+                />
+                {errors.userName && <p className="text-sm text-destructive mt-1">{errors.userName}</p>}
               </div>
-            </div>
 
-            {/* Mobile Navigation */}
-            <nav className="space-y-2">
-              <Link
-                href="/category/womens-salon-spa"
-                className="block py-2 text-muted-foreground hover:text-primary font-medium transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Beauty
-              </Link>
-              <Link
-                href="/category/ac-appliance-repair"
-                className="block py-2 text-muted-foreground hover:text-primary font-medium transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Revamp
-              </Link>
-              <Link
-                href="/category/native-water-purifier"
-                className="block py-2 text-muted-foreground hover:text-primary font-medium transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Native
-              </Link>
-            </nav>
+              <div>
+                <Label htmlFor="mobileNumber">Mobile Number</Label>
+                <Input
+                  id="mobileNumber"
+                  type="tel"
+                  value={formData.mobileNumber}
+                  onChange={(e) => updateFormData("mobileNumber", e.target.value)}
+                  placeholder="Enter your mobile number"
+                  className={errors.mobileNumber ? "border-destructive" : ""}
+                />
+                {errors.mobileNumber && <p className="text-sm text-destructive mt-1">{errors.mobileNumber}</p>}
+              </div>
+            </>
+          )}
 
-            {/* Mobile Location */}
-            <div className="xl:hidden flex items-center space-x-2 text-muted-foreground py-2">
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm">Dadar, Mumbai</span>
-            </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => updateFormData("email", e.target.value)}
+              placeholder="Enter your email"
+              className={errors.email ? "border-destructive" : ""}
+            />
+            {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
+          </div>
 
-            {/* Mobile Profile Link - Updated */}
-            <div className="sm:hidden pt-2 border-t">
-              {user ? (
-                <div className="space-y-2">
-                  <div className="py-2">
-                    <p className="text-sm font-medium text-foreground">{user.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                  </div>
-                  <Link
-                    href="/consumer/dashboard"
-                    className="block py-2 text-muted-foreground hover:text-primary font-medium transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout()
-                      setMobileMenuOpen(false)
-                    }}
-                    className="block py-2 text-destructive font-medium transition-colors w-full text-left"
-                  >
-                    Sign Out
-                  </button>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => updateFormData("password", e.target.value)}
+              placeholder="Enter your password"
+              className={errors.password ? "border-destructive" : ""}
+            />
+            {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
+          </div>
+
+          {mode === "signup" && (
+            <>
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="font-medium text-sm text-muted-foreground">Address Information</h3>
+
+                <div>
+                  <Label htmlFor="addressLine1">Address</Label>
+                  <Textarea
+                    id="addressLine1"
+                    value={formData.address.addressLine1}
+                    onChange={(e) => updateFormData("address.addressLine1", e.target.value)}
+                    placeholder="Enter your complete address"
+                    className={errors.addressLine1 ? "border-destructive" : ""}
+                    rows={2}
+                  />
+                  {errors.addressLine1 && <p className="text-sm text-destructive mt-1">{errors.addressLine1}</p>}
                 </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center space-x-2 py-2 text-muted-foreground hover:text-primary font-medium transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="w-4 h-4" />
-                  <span>Sign In</span>
-                </Link>
-              )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      type="text"
+                      value={formData.address.city}
+                      onChange={(e) => updateFormData("address.city", e.target.value)}
+                      placeholder="City"
+                      className={errors.city ? "border-destructive" : ""}
+                    />
+                    {errors.city && <p className="text-sm text-destructive mt-1">{errors.city}</p>}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input
+                      id="pincode"
+                      type="text"
+                      value={formData.address.pincode}
+                      onChange={(e) => updateFormData("address.pincode", e.target.value)}
+                      placeholder="Pincode"
+                      className={errors.pincode ? "border-destructive" : ""}
+                    />
+                    {errors.pincode && <p className="text-sm text-destructive mt-1">{errors.pincode}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      type="text"
+                      value={formData.address.state}
+                      onChange={(e) => updateFormData("address.state", e.target.value)}
+                      placeholder="State"
+                      className={errors.state ? "border-destructive" : ""}
+                    />
+                    {errors.state && <p className="text-sm text-destructive mt-1">{errors.state}</p>}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="addressType">Address Type</Label>
+                    <Select
+                      value={formData.address.addressType}
+                      onValueChange={(value) => updateFormData("address.addressType", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="home">Home</SelectItem>
+                        <SelectItem value="work">Work</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
-        )}
-      </div>
-    </header>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full bg-transparent"
+            asChild
+          >
+            <a href="/api/auth/google">
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Continue with Google
+            </a>
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

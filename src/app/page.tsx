@@ -1,11 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { HeroSection } from "@/components/content/hero-section"
 import { CategoryCard } from "@/components/content/category-card"
-import { UCPromise } from "@/components/content/uc-promise"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getCategories, type Category } from "@/lib/content"
 
@@ -30,7 +29,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <NavigationHeader />
 
       <main>
         <HeroSection />
@@ -62,7 +61,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <UCPromise />
       </main>
 
       <Footer />

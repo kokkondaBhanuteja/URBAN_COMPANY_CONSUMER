@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Header } from "@/components/layout/header"
+import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { ConsumerAuthForm } from "@/components/auth/consumer-auth-form"
 import { authService } from "@/lib/auth"
@@ -18,14 +18,10 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const response = await authService.login(data.email, data.password)
+      await authService.login(data.email, data.password)
 
-      // Store auth data
-      authService.setAuthToken(response.token)
-      authService.setUser(response.user)
-
-      // Redirect to home page
-      router.push("/")
+      // Redirect to dashboard page
+      router.push("/dashboard")
     } catch (error: any) {
       setError(error.message || "Login failed. Please try again.")
     } finally {
@@ -35,7 +31,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <NavigationHeader />
 
       <main className="py-16">
         <div className="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">

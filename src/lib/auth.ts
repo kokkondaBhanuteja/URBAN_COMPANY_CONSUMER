@@ -6,7 +6,6 @@ interface User {
 }
 
 interface AuthResponse {
-  token: string
   user: User
 }
 
@@ -18,6 +17,7 @@ export const authService = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
+      credentials: "include", // Include cookies for authentication
     })
 
     const data = await response.json()
@@ -26,6 +26,7 @@ export const authService = {
       throw new Error(data.message || "Login failed")
     }
 
+    this.setUser(data.user)
     return data
   },
 
@@ -36,6 +37,7 @@ export const authService = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(userData),
+      credentials: "include", // Include cookies for authentication
     })
 
     const data = await response.json()
@@ -47,29 +49,36 @@ export const authService = {
     return data
   },
 
-  setAuthToken(token: string) {
-    localStorage.setItem("uc-auth-token", token)
-  },
-
-  getAuthToken(): string | null {
-    return localStorage.getItem("uc-auth-token")
-  },
-
   setUser(user: User) {
     localStorage.setItem("uc-user", JSON.stringify(user))
   },
 
   getUser(): User | null {
+    if (typeof window === "undefined") return null
     const userStr = localStorage.getItem("uc-user")
     return userStr ? JSON.parse(userStr) : null
   },
 
-  logout() {
-    localStorage.removeItem("uc-auth-token")
-    localStorage.removeItem("uc-user")
+  getAuthToken(): string | null {
+    // Since we're using cookie-based auth, we don't need to return a token
+    // The cookie will be sent automatically with requests
+    return null
+  },
+
+  async logout() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Logout API error:", error)
+    } finally {
+      localStorage.removeItem("uc-user")
+    }
   },
 
   isAuthenticated(): boolean {
-    return !!this.getAuthToken() && !!this.getUser()
+    return !!this.getUser()
   },
 }

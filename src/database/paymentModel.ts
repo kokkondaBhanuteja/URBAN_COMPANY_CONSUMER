@@ -1,7 +1,8 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface IPayment extends Document {
-  bookingId: Types.ObjectId; // Ref to Booking
+  bookingId: Types.ObjectId;
+  userId: Types.ObjectId;
   amount: number;
   paymentMethod: "credit_card" | "upi" | "net_banking" | "cod";
   paymentStatus: "pending" | "successful" | "failed";
@@ -17,6 +18,12 @@ const paymentSchema = new Schema<IPayment>(
       ref: "Booking",
       required: true,
       unique: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
     },
     amount: { type: Number, required: true },
     paymentMethod: {
@@ -34,6 +41,7 @@ const paymentSchema = new Schema<IPayment>(
   { timestamps: true }
 );
 
-const Payment = mongoose.models.Payment || mongoose.model<IPayment>("Payment", paymentSchema);
-
+const Payment =
+  mongoose.models.Payment || mongoose.model<IPayment>("Payment", paymentSchema);
+  
 export default Payment;
