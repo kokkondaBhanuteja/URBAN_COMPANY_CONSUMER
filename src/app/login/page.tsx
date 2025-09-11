@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { NavigationHeader } from "@/components/layout/navigation-header"
@@ -12,6 +12,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+
+  useEffect(() => {
+    // Redirect if user is already logged in
+    if (authService.isAuthenticated()) {
+      router.push("/")
+    }
+  }, [router])
 
   const handleLogin = async (data: { email: string; password: string }) => {
     setLoading(true)
