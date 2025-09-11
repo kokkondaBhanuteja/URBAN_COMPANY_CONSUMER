@@ -6,7 +6,7 @@ import Link from "next/link"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { ConsumerAuthForm } from "@/components/auth/consumer-auth-form"
-import { authService } from "@/lib/auth"
+import { authService } from "@/services/authService"
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)

@@ -39,6 +39,8 @@
     "@radix-ui/react-tooltip": "latest",
     "@remix-run/react": "latest",
     "@sveltejs/kit": "latest",
+    "@tanstack/react-query": "^5.87.4",
+    "@tanstack/react-query-devtools": "^5.87.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.1",
     "@vercel/analytics": "latest",

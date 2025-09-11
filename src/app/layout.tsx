@@ -1,9 +1,9 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
 import { Suspense } from "react"
+import { Providers } from "@/components/providers"
 import "./globals.css"
 
 const inter = Inter({
@@ -26,10 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${inter.variable} antialiased`}>
-        <Suspense fallback={null}>
-          <CartProvider>{children}</CartProvider>
-        </Suspense>
-        <Analytics />
+        <Providers>
+          <Suspense fallback={null}>
+            <CartProvider>{children}</CartProvider>
+          </Suspense>
+        </Providers>
       </body>
     </html>
   )

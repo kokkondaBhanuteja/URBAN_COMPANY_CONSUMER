@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { User, Calendar, MapPin, Mail, LogOut, Settings, ShieldCheck } from "lucide-react"
-import { authService } from "@/lib/auth"
+import { authService } from "@/services/authService"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 

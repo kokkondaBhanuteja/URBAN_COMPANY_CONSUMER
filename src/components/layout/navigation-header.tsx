@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Search, Menu, MapPin, User, LogOut, LayoutDashboard } from "lucide-react"
-import { authService } from "@/lib/auth"
+import { authService } from "@/services/authService"
 import {
   DropdownMenu,
   DropdownMenuContent,

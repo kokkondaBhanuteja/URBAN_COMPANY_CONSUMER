@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import User from "@/database/userModel";
 
-export async function consumerMiddleware(req: NextRequest): Promise<Headers> {
+export async function consumerMiddleware(req: NextRequest): Promise<NextResponse | Headers> {
   const token = req.cookies.get("token")?.value;
 
   if (!token) {
-    throw new Error("Authorization token is missing");
+    return new NextResponse(JSON.stringify({ message: "Authorization token is missing" }), { status: 401 });
   }
 
   try {
@@ -16,12 +17,12 @@ export async function consumerMiddleware(req: NextRequest): Promise<Headers> {
     };
 
     if (decoded.userType !== "consumer") {
-      throw new Error("Access denied: Not a consumer");
+      return new NextResponse(JSON.stringify({ message: "Access denied: Not a consumer" }), { status: 403 });
     }
 
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
-      throw new Error("User not found");
+      return new NextResponse(JSON.stringify({ message: "User not found" }), { status: 404 });
     }
 
     // Create new headers and add the user ID
@@ -32,7 +33,6 @@ export async function consumerMiddleware(req: NextRequest): Promise<Headers> {
     // Return the new headers
     return requestHeaders;
   } catch (error) {
-    // Re-throw the error to be caught by the API route
-    throw new Error("Invalid or expired token");
+    return new NextResponse(JSON.stringify({ message: "Invalid or expired token" }), { status: 401 });
   }
 }

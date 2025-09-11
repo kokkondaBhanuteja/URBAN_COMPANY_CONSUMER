@@ -1,31 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { HeroSection } from "@/components/content/hero-section"
 import { CategoryCard } from "@/components/content/category-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getCategories, type Category } from "@/lib/content"
+import { useQuery } from "@tanstack/react-query"
 
 export default function HomePage() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: categories, isLoading } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
 
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const data = await getCategories()
-        setCategories(data)
-      } catch (error) {
-        console.error("Failed to load categories:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadCategories()
-  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -41,7 +29,7 @@ export default function HomePage() {
               What are you looking for?
             </h2>
 
-            {loading ? (
+            {isLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="space-y-3">
@@ -53,7 +41,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-                {categories.map((category) => (
+                {categories?.map((category) => (
                   <CategoryCard key={category.id} category={category} />
                 ))}
               </div>

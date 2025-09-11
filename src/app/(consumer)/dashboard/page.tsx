@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { DashboardStats } from "@/components/consumer/dashboard-stats"
 import { RecentBookings } from "@/components/consumer/recent-bookings"
 import { QuickActions } from "@/components/consumer/quick-actions"
-import { authService } from "@/lib/auth"
+import { authService } from "@/services/authService"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useQuery } from "@tanstack/react-query"
 
 
 interface DashboardData {
@@ -19,51 +19,31 @@ interface DashboardData {
   consumerProfile: any
 }
 
-export default function ConsumerDashboard() {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const router = useRouter()
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      // Check if user is authenticated client-side first
-      if (!authService.isAuthenticated()) {
-        router.push("/login")
-        return
-      }
-
-      try {
-        // Fetch data from the server. The browser will automatically send the auth cookie.
-        const response = await fetch("/api/consumer/dashboard", {
-          credentials: "include", // This is crucial for sending httpOnly cookies
-        })
-
-        if (response.status === 401) {
-          // If the cookie is invalid or expired, the server will tell us.
-          authService.logout()
-          router.push("/login?error=Session expired. Please log in again.")
-          return
-        }
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch dashboard data")
-        }
-
-        const data = await response.json()
-        setDashboardData(data)
-      } catch (error: any) {
-        setError(error.message || "Failed to load dashboard")
-        console.error("Dashboard fetch error:", error)
-      } finally {
-        setLoading(false)
-      }
+const fetchDashboardData = async (): Promise<DashboardData> => {
+  const response = await fetch("/api/consumer/dashboard", {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    if (response.status === 401) {
+      authService.logout();
+      window.location.href = "/login?error=Session expired. Please log in again.";
     }
+    throw new Error("Failed to fetch dashboard data");
+  }
+  return response.json();
+};
 
-    fetchDashboardData()
-  }, [router])
 
-  if (loading) {
+export default function ConsumerDashboard() {
+  const router = useRouter()
+  const { data: dashboardData, isLoading, error } = useQuery<DashboardData>({
+    queryKey: ['dashboardData'],
+    queryFn: fetchDashboardData,
+    enabled: authService.isAuthenticated(),
+  });
+
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <NavigationHeader />
@@ -95,7 +75,7 @@ export default function ConsumerDashboard() {
         <main className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Dashboard</h1>
-            <p className="text-muted-foreground mb-8">{error}</p>
+            <p className="text-muted-foreground mb-8">{error.message}</p>
             <button
               onClick={() => window.location.reload()}
               className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
