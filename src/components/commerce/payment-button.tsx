@@ -1,19 +1,23 @@
-"use client"
+// src/components/commerce/payment-button.tsx
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { CreditCard, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { openRazorpayCheckout, type PaymentResult, type PaymentOptions } from "@/lib/payments"
+import type React from "react";
+import { useState } from "react";
+import { CreditCard, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  openRazorpayCheckout,
+  type PaymentResult,
+  type PaymentOptions,
+} from "@/lib/payments";
 
 interface PaymentButtonProps extends PaymentOptions {
-  onResult?: (result: PaymentResult) => void
-  disabled?: boolean
-  className?: string
-  children?: React.ReactNode
+  onResult?: (result: PaymentResult) => void;
+  disabled?: boolean;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 export function PaymentButton({
@@ -26,20 +30,20 @@ export function PaymentButton({
   className = "",
   children,
 }: PaymentButtonProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY
-  const isTestMode = !razorpayKey || razorpayKey.startsWith("rzp_test_")
+  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const isTestMode = !razorpayKey || razorpayKey.startsWith("rzp_test_");
 
   const handlePayment = async () => {
     if (!razorpayKey) {
-      setError("Payment is not configured. Please contact support.")
-      return
+      setError("Payment is not configured. Please contact support.");
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const result = await openRazorpayCheckout({
@@ -47,22 +51,22 @@ export function PaymentButton({
         currency,
         prefill,
         notes,
-      })
+      });
 
       if (onResult) {
-        onResult(result)
+        onResult(result);
       }
 
       if (!result.success && result.error) {
-        setError(result.error)
+        setError(result.error);
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
-      console.error("Payment error:", err)
+      setError("An unexpected error occurred. Please try again.");
+      console.error("Payment error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (!razorpayKey) {
     return (
@@ -74,12 +78,13 @@ export function PaymentButton({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            To enable payments, set the <code>NEXT_PUBLIC_RAZORPAY_KEY</code> environment variable with your Razorpay
-            key.
+            To enable payments, set the{" "}
+            <code>NEXT_PUBLIC_RAZORPAY_KEY_ID</code> environment variable with
+            your Razorpay key.
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   return (
@@ -95,7 +100,10 @@ export function PaymentButton({
         </Button>
 
         {isTestMode && (
-          <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
+          <Badge
+            variant="secondary"
+            className="ml-2 bg-yellow-100 text-yellow-800"
+          >
             Test Mode
           </Badge>
         )}
@@ -105,7 +113,8 @@ export function PaymentButton({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            This is test mode. No real money will be charged. Use test card: 4111 1111 1111 1111
+            This is test mode. No real money will be charged. Use test card:
+            4111 1111 1111 1111
           </AlertDescription>
         </Alert>
       )}
@@ -117,5 +126,5 @@ export function PaymentButton({
         </Alert>
       )}
     </div>
-  )
+  );
 }

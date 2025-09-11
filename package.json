@@ -61,6 +61,7 @@
     "nodemailer": "^7.0.6",
     "passport": "latest",
     "passport-google-oauth20": "latest",
+    "razorpay": "^2.9.6",
     "react": "^18",
     "react-day-picker": "latest",
     "react-dom": "^18",

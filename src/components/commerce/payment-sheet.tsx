@@ -17,9 +17,14 @@ interface PaymentSheetProps {
   }>
   onSuccess?: (result: PaymentResult) => void
   onCancel?: () => void
+  prefill?: {
+    name?: string
+    email?: string
+    contact?: string
+  }
 }
 
-export function PaymentSheet({ amountSubunits, currency = "INR", items, onSuccess, onCancel }: PaymentSheetProps) {
+export function PaymentSheet({ amountSubunits, currency = "INR", items, onSuccess, onCancel, prefill }: PaymentSheetProps) {
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
   const [showReceipt, setShowReceipt] = useState(false)
 
@@ -125,11 +130,7 @@ export function PaymentSheet({ amountSubunits, currency = "INR", items, onSucces
         <PaymentButton
           amountSubunits={amountSubunits}
           currency={currency}
-          prefill={{
-            name: "Customer Name",
-            email: "customer@example.com",
-            contact: "+919999999999",
-          }}
+          prefill={prefill}
           notes={{
             order_type: "home_service",
             items_count: items.length.toString(),

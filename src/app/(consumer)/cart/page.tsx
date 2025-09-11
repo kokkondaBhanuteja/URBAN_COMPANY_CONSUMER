@@ -13,6 +13,7 @@ import { AuthGuard } from "@/components/consumer/auth-guard"
 import { BookingForm } from "@/components/consumer/booking-form"
 import { useCart } from "@/lib/cart-context"
 import type { PaymentResult } from "@/lib/payments"
+import { authService } from "@/services/authService"
 
 export default function CartPage() {
   const { items, totalItems, totalAmountSubunits, updateQuantity, removeItem, clearCart } = useCart()
@@ -20,6 +21,7 @@ export default function CartPage() {
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [bookingData, setBookingData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const user = authService.getUser()
 
   const formatPrice = (priceSubunits: number) => {
     return (priceSubunits / 100).toLocaleString("en-IN", {
@@ -50,7 +52,7 @@ export default function CartPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Use cookies instead of Authorization header
+        credentials: "include",
         body: JSON.stringify({
           serviceId: firstItem.serviceId,
           serviceAddress: formData.serviceAddress,
@@ -104,6 +106,10 @@ export default function CartPage() {
               items={paymentItems}
               onSuccess={handlePaymentSuccess}
               onCancel={() => setShowCheckout(false)}
+              prefill={{
+                name: user?.fullName,
+                email: user?.email,
+              }}
             />
           </div>
         </main>

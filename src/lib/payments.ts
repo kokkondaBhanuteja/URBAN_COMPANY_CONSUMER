@@ -1,111 +1,115 @@
-// Frontend-only Razorpay integration with mock order creation
-
+// src/lib/payments.ts
 export interface PaymentResult {
-  success: boolean
-  paymentId?: string
-  orderId?: string
-  signature?: string
-  error?: string
-}
-
-export interface MockOrder {
-  id: string
-  amount: number
-  currency: "INR"
+  success: boolean;
+  paymentId?: string;
+  orderId?: string;
+  signature?: string;
+  error?: string;
 }
 
 export interface PaymentOptions {
-  amountSubunits: number
-  currency?: "INR"
+  amountSubunits: number;
+  currency?: "INR";
   prefill?: {
-    name?: string
-    email?: string
-    contact?: string
-  }
-  notes?: Record<string, string>
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
 }
 
-// Create mock order for test mode
-export function createMockOrder(amountSubunits: number, currency: "INR" = "INR"): MockOrder {
-  return {
-    id: `order_mock_${Date.now()}`,
-    amount: amountSubunits,
-    currency,
-  }
-}
-
-// Load Razorpay script dynamically
-let razorpayLoaded = false
-let razorpayLoading = false
+let razorpayLoaded = false;
+let razorpayLoading = false;
 
 export function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (razorpayLoaded) {
-      resolve(true)
-      return
+      resolve(true);
+      return;
     }
 
     if (razorpayLoading) {
-      // Wait for existing load to complete
       const checkLoaded = () => {
         if (razorpayLoaded) {
-          resolve(true)
+          resolve(true);
         } else {
-          setTimeout(checkLoaded, 100)
+          setTimeout(checkLoaded, 100);
         }
-      }
-      checkLoaded()
-      return
+      };
+      checkLoaded();
+      return;
     }
 
-    razorpayLoading = true
+    razorpayLoading = true;
 
-    const script = document.createElement("script")
-    script.src = "https://checkout.razorpay.com/v1/checkout.js"
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => {
-      razorpayLoaded = true
-      razorpayLoading = false
-      resolve(true)
-    }
+      razorpayLoaded = true;
+      razorpayLoading = false;
+      resolve(true);
+    };
     script.onerror = () => {
-      razorpayLoading = false
-      resolve(false)
-    }
+      razorpayLoading = false;
+      resolve(false);
+    };
 
-    document.body.appendChild(script)
-  })
+    document.body.appendChild(script);
+  });
 }
 
-// Open Razorpay checkout
-export async function openRazorpayCheckout(options: PaymentOptions): Promise<PaymentResult> {
-  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY
+export async function openRazorpayCheckout(
+  options: PaymentOptions
+): Promise<PaymentResult> {
+  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
   if (!razorpayKey) {
     return {
       success: false,
-      error: "Razorpay key not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY environment variable.",
-    }
+      error:
+        "Razorpay key not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID environment variable.",
+    };
   }
 
-  const scriptLoaded = await loadRazorpayScript()
+  const scriptLoaded = await loadRazorpayScript();
   if (!scriptLoaded) {
     return {
       success: false,
-      error: "Failed to load Razorpay script. Please check your internet connection.",
-    }
+      error:
+        "Failed to load Razorpay script. Please check your internet connection.",
+    };
   }
 
-  const mockOrder = createMockOrder(options.amountSubunits, options.currency)
+  // Create order on the server
+  const orderResponse = await fetch("/api/razorpay", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: options.amountSubunits,
+      currency: options.currency || "INR",
+    }),
+  });
+
+  if (!orderResponse.ok) {
+    return {
+      success: false,
+      error: "Failed to create Razorpay order.",
+    };
+  }
+
+  const { order } = await orderResponse.json();
 
   return new Promise((resolve) => {
     const razorpayOptions = {
       key: razorpayKey,
-      amount: options.amountSubunits,
-      currency: options.currency || "INR",
+      amount: order.amount,
+      currency: order.currency,
       name: "Urban Company",
       description: "Home Services Payment",
       image: "/favicon.ico",
-      order_id: mockOrder.id,
+      order_id: order.id,
       prefill: options.prefill || {},
       notes: options.notes || {},
       theme: {
@@ -116,7 +120,7 @@ export async function openRazorpayCheckout(options: PaymentOptions): Promise<Pay
           resolve({
             success: false,
             error: "Payment cancelled by user",
-          })
+          });
         },
         confirm_close: true,
       },
@@ -126,36 +130,35 @@ export async function openRazorpayCheckout(options: PaymentOptions): Promise<Pay
           paymentId: response.razorpay_payment_id,
           orderId: response.razorpay_order_id,
           signature: response.razorpay_signature,
-        })
+        });
       },
-    }
+    };
 
     // @ts-ignore - Razorpay is loaded dynamically
-    const rzp = new window.Razorpay(razorpayOptions)
+    const rzp = new window.Razorpay(razorpayOptions);
 
     rzp.on("payment.failed", (response: any) => {
       resolve({
         success: false,
         error: response.error.description || "Payment failed",
-      })
-    })
+      });
+    });
 
-    rzp.open()
-  })
+    rzp.open();
+  });
 }
 
-// Format currency for display
-export function formatCurrency(amountSubunits: number, currency: "INR" = "INR"): string {
+export function formatCurrency(
+  amountSubunits: number,
+  currency: "INR" = "INR"
+): string {
   return (amountSubunits / 100).toLocaleString("en-IN", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  })
+  });
 }
 
-// Validate payment result (in real app, this would be done on server)
 export function validatePaymentResult(result: PaymentResult): boolean {
-  // In a real application, you would verify the signature on the server
-  // For this demo, we just check if we have the required fields
-  return !!(result.success && result.paymentId && result.orderId)
+  return !!(result.success && result.paymentId && result.orderId);
 }
