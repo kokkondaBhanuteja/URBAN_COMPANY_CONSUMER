@@ -2,14 +2,16 @@ import { type NextRequest, NextResponse } from "next/server"
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
 import { getConsumerProfile, updateConsumerProfile } from "@/services/consumer/consumerService"
 import { connectDb } from "@/lib/dbConnect"
+import User from "@/database/userModel"
+import Consumer from "@/database/consumerModel"
 
 export async function GET(req: NextRequest) {
   await connectDb()
 
   try {
-    const middlewareResponse = await consumerMiddleware(req);
+    const middlewareResponse = await consumerMiddleware(req)
     if (middlewareResponse instanceof NextResponse) {
-        return middlewareResponse;
+      return middlewareResponse
     }
 
     const userId = middlewareResponse.get("x-user-id")
@@ -34,9 +36,9 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   await connectDb()
   try {
-    const middlewareResponse = await consumerMiddleware(req);
+    const middlewareResponse = await consumerMiddleware(req)
     if (middlewareResponse instanceof NextResponse) {
-        return middlewareResponse;
+      return middlewareResponse
     }
     const userId = middlewareResponse.get("x-user-id")
 
@@ -45,7 +47,24 @@ export async function PUT(req: NextRequest) {
     }
 
     const updateData = await req.json()
-    const updatedProfile = await updateConsumerProfile(userId, updateData)
+
+    // Update User model
+    await User.findByIdAndUpdate(userId, { userName: updateData.userName })
+
+    // Update Consumer address
+    await Consumer.findOneAndUpdate(
+      { userId },
+      {
+        $set: {
+          "address.addressLine1": updateData.addressLine1,
+          "address.city": updateData.city,
+          "address.pincode": updateData.pincode,
+          "address.state": updateData.state,
+        },
+      },
+    )
+
+    const updatedProfile = await getConsumerProfile(userId)
 
     if (!updatedProfile) {
       return NextResponse.json({ message: "Consumer profile not found" }, { status: 404 })

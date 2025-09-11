@@ -133,20 +133,20 @@ export function NavigationHeader() {
             </div>
 
             {/* Cart Icon */}
-             <Link href="/cart">
-                <Button variant="ghost" size="icon" className="relative">
-                    <ShoppingBag className="h-5 w-5" />
-                    {isClient && totalItems > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                            {totalItems}
-                        </span>
-                    )}
-                </Button>
+            <Link href="/cart">
+              <Button variant="ghost" size="icon" className="relative">
+                <ShoppingBag className="h-5 w-5" />
+                {isClient && totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    {totalItems}
+                  </span>
+                )}
+              </Button>
             </Link>
 
             {/* Auth section */}
             <div className="hidden md:flex">
-               {isClient && user ? (
+              {isClient && user ? (
                 <UserNav />
               ) : (
                 <Link href="/login">
@@ -156,7 +156,7 @@ export function NavigationHeader() {
                 </Link>
               )}
             </div>
-            
+
             {/* Mobile Menu */}
             <div className="md:hidden">
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -168,35 +168,35 @@ export function NavigationHeader() {
                 <SheetContent side="right" className="w-full max-w-xs">
                   <div className="flex flex-col space-y-4 mt-8">
                     {isClient && user ? (
-                       <div className="space-y-2">
-                         <Button variant="ghost" className="w-full justify-start" asChild>
-                            <Link href="/profile" onClick={() => setIsOpen(false)}>
-                              <User className="h-4 w-4 mr-2" />
-                              Profile
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" className="w-full justify-start" asChild>
-                            <Link href="/bookings" onClick={() => setIsOpen(false)}>
-                              <Briefcase className="h-4 w-4 mr-2" />
-                              My Bookings
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Log Out
-                          </Button>
-                       </div>
-                    ) : (
-                       <Link href="/login" onClick={() => setIsOpen(false)}>
-                          <Button className="w-full">Login / Sign Up</Button>
-                        </Link>
-                    )}
-                     <div className="border-t pt-4 space-y-2">
-                        <Button variant="ghost" className="w-full justify-start">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          Hanamkonda
+                      <div className="space-y-2">
+                        <Button variant="ghost" className="w-full justify-start" asChild>
+                          <Link href="/profile" onClick={() => setIsOpen(false)}>
+                            <User className="h-4 w-4 mr-2" />
+                            Profile
+                          </Link>
                         </Button>
-                     </div>
+                        <Button variant="ghost" className="w-full justify-start" asChild>
+                          <Link href="/bookings" onClick={() => setIsOpen(false)}>
+                            <Briefcase className="h-4 w-4 mr-2" />
+                            My Bookings
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Log Out
+                        </Button>
+                      </div>
+                    ) : (
+                      <Link href="/login" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full">Login / Sign Up</Button>
+                      </Link>
+                    )}
+                    <div className="border-t pt-4 space-y-2">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Hanamkonda
+                      </Button>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
