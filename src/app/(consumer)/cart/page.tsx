@@ -78,15 +78,41 @@ export default function CartPage() {
     }
   }
 
-  const handlePaymentSuccess = (result: PaymentResult) => {
-    // Clear cart after successful payment
-    clearCart()
-    setShowCheckout(false)
-    setShowBookingForm(false)
-    setBookingData(null)
+  const handlePaymentSuccess = async (result: PaymentResult) => {
+    if (result.success && result.paymentId) {
+      try {
+        setLoading(true);
+        await fetch("/api/consumer/payments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            bookingId: bookingData.bookingId,
+            amount: totalAmountSubunits / 100,
+            paymentMethod: "credit_card", // Or get this dynamically
+            paymentStatus: "successful",
+            transactionId: result.paymentId,
+          }),
+        });
 
-    console.log("Payment successful:", result)
-  }
+        // Clear cart and reset state after successful payment and recording
+        clearCart();
+        setShowCheckout(false);
+        setShowBookingForm(false);
+        setBookingData(null);
+        console.log("Payment successful and recorded:", result);
+        // You might want to redirect to a success page here
+        // router.push('/booking-success');
+      } catch (error) {
+        console.error("Failed to save payment details:", error);
+        // Handle the error appropriately, e.g., show a message to the user
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const paymentItems = items.map((item) => ({
     title: `${item.title} - ${item.optionTitle}`,

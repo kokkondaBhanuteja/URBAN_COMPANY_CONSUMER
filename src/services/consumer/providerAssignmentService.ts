@@ -1,3 +1,5 @@
+import { sendBookingConfirmationEmail } from "@/services/notificationService";
+import User from "@/database/userModel";
 import Booking from "@/database/bookingModel";
 import Provider from "@/database/ProviderModel";
 import { IBooking } from "@/database/bookingModel";
@@ -80,7 +82,7 @@ async function rankProviders(providers: IProvider[]): Promise<IProvider[]> {
  * @param bookingId The ID of the booking to assign.
  */
 export async function assignProviderToBooking(bookingId: string) {
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId).populate('serviceId');
 
     if (!booking || booking.bookingStatus !== 'requested') {
         throw new Error("Booking not found or is not in a 'requested' state.");
@@ -90,21 +92,24 @@ export async function assignProviderToBooking(bookingId: string) {
 
     if (availableProviders.length === 0) {
         console.warn(`No available providers found for booking: ${bookingId}`);
-        // Here you could add logic to flag this booking for manual assignment
         return;
     }
 
     const rankedProviders = await rankProviders(availableProviders);
     const bestProvider = rankedProviders[0];
 
-    // Assign the top-ranked provider to the booking
     booking.providerId = bestProvider._id;
     booking.bookingStatus = 'assigned';
     await booking.save();
 
     console.log(`Successfully assigned provider ${bestProvider._id} to booking ${bookingId}`);
-    
-    // You can add a notification call to the provider here
+
+    const user = await User.findById(booking.userId);
+    if(user) {
+      await sendBookingConfirmationEmail(user, booking);
+    }
+
+    // await sendNewBookingNotificationToProvider(bestProvider, booking);
 
     return booking;
 }
