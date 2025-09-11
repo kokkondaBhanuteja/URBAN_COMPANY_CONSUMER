@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDb } from "@/lib/dbConnect"
-import { getServicesByCategory, searchServices } from "@/services/consumer/serviceDiscoveryService"
+import { getServicesByCategory, searchServices, searchServicesByLocation } from "@/services/consumer/serviceDiscoveryService"
 import ServiceCategory from "@/database/serviceCategoryModel"
 
 export async function GET(req: NextRequest) {
@@ -13,10 +13,12 @@ export async function GET(req: NextRequest) {
 
     let services = []
 
-    if (query) {
-      // Search services
+    if (location && !query && !categorySlug) {
+      // Search by location only
+      services = await searchServicesByLocation(location);
+    } else if (query) {
+      // Search by query (with or without location)
       services = await searchServices(query, location || undefined)
-
     } else if (categorySlug) {
       // Get category by slug first
       const category = await ServiceCategory.findOne({
@@ -28,6 +30,7 @@ export async function GET(req: NextRequest) {
         services = await getServicesByCategory(category._id.toString(), location || undefined)
       }
     } else {
+      // Default case if no parameters are provided
       const allCategories = await ServiceCategory.find({ isActive: true })
       const allServices = []
 
@@ -35,13 +38,12 @@ export async function GET(req: NextRequest) {
         const categoryServices = await getServicesByCategory(category._id.toString(), location || undefined)
         allServices.push(...categoryServices)
       }
-
       services = allServices
     }
 
     console.log("Raw services from DB:", services)
     // Transform to match frontend interface
-    const transformedServices = services.map((service) => ({
+    const transformedServices = services.map((service: any) => ({
       id: service._id.toString(),
       slug: service.serviceName.toLowerCase().replace(/\s+/g, "-"),
       categorySlug: categorySlug || "general",

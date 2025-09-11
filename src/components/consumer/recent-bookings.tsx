@@ -15,7 +15,9 @@ interface Booking {
   }
   bookingStatus: string
   scheduledAt: string
-  totalPrice: number
+  pricing: {
+    finalAmount: number
+  }
   serviceAddress: {
     addressLine1: string
     city: string
@@ -84,11 +86,6 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold">Recent Bookings</CardTitle>
-          <Link href="/components/consumer/bookings">
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
-          </Link>
         </CardHeader>
         <CardContent>
           {bookings.length === 0 ? (
@@ -133,7 +130,7 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                       </div>
                     </div>
 
-                    <div className="text-sm font-medium">{formatCurrency(booking.totalPrice)}</div>
+                    <div className="text-sm font-medium">{formatCurrency(booking.pricing.finalAmount)}</div>
                   </div>
                 </div>
               ))}
