@@ -39,7 +39,7 @@ export function NavigationHeader() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("")
-  const [locationQuery, setLocationQuery] = useState("Visakhapatnam")
+  const [locationQuery, setLocationQuery] = useState("Warangal") // <-- Changed to Warangal
   const [searchResults, setSearchResults] = useState<IService[]>([])
   const [isSearchLoading, setIsSearchLoading] = useState(false)
   const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false)

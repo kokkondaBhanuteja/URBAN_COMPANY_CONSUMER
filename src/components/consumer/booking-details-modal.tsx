@@ -68,7 +68,7 @@ import {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Amount Paid</span>
-              <span>{formatCurrency(booking.totalPrice)}</span>
+              <span>{formatCurrency(booking.pricing.finalAmount)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Discount</span>

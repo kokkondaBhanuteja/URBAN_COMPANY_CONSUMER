@@ -3,6 +3,7 @@ import {
   getServiceCategories,
   getServicesByCategory,
   searchServices,
+  searchServicesByLocation,
 } from "@/services/consumer/serviceDiscoveryService"
 import { connectDb } from "@/lib/dbConnect"
 
@@ -15,8 +16,13 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get("query")
     const location = searchParams.get("location")
 
-    if (query) {
-      // Search services
+    if (location && !query && !categoryId) {
+        // Search by location only
+        const services = await searchServicesByLocation(location);
+        return NextResponse.json({ services });
+    }
+    else if (query) {
+      // Search services by query
       const services = await searchServices(query, location || undefined)
       return NextResponse.json({ services })
     } else if (categoryId) {

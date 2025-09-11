@@ -22,7 +22,7 @@ export const getServicesByCategory = async (categoryId: string, location?: strin
     const serviceIds = services.map((service) => service._id)
     const availableProviders = await Provider.find({
       servicesOffered: { $in: serviceIds },
-      serviceableLocations: { $regex: location, $options: "i" },
+      serviceableLocations: { $regex: new RegExp(location, "i") },
       isActive: true,
       isVerified: true,
     })
@@ -42,41 +42,66 @@ export const getServicesByCategory = async (categoryId: string, location?: strin
   return services
 }
 
-// Search services
+// Search services by query
 export const searchServices = async (query: string, location?: string) => {
-  const searchRegex = new RegExp(query, "i")
-
-  const services = await Service.find({
-    $or: [{ serviceName: searchRegex }, { description: searchRegex }],
-    isActive: true,
-  })
-    .populate("category", "categoryName iconUrl")
-    .sort({ serviceName: 1 })
-
-  // Apply location filter if provided
-  if (location) {
-    const serviceIds = services.map((service) => service._id)
-    const availableProviders = await Provider.find({
-      servicesOffered: { $in: serviceIds },
-      serviceableLocations: { $regex: location, $options: "i" },
-      isActive: true,
-      isVerified: true,
-    })
-
-    const availableServiceIds = new Set()
-    availableProviders.forEach((provider) => {
-      provider.servicesOffered.forEach((serviceId) => {
-        if (serviceIds.some((id) => id.equals(serviceId))) {
-          availableServiceIds.add(serviceId.toString())
+    // Use a text search query
+    const services = await Service.find(
+        { 
+            $text: { $search: query },
+            isActive: true 
+        },
+        { 
+            score: { $meta: "textScore" } 
         }
-      })
-    })
+    )
+    .populate("category", "categoryName iconUrl")
+    .sort({ score: { $meta: "textScore" } });
 
-    return services.filter((service) => availableServiceIds.has(service._id.toString()))
-  }
+    // Apply location filter if provided
+    if (location) {
+        const serviceIds = services.map((service) => service._id);
+        const availableProviders = await Provider.find({
+            servicesOffered: { $in: serviceIds },
+            serviceableLocations: { $regex: new RegExp(location, "i") },
+            isActive: true,
+            isVerified: true,
+        });
 
-  return services
-}
+        const availableServiceIds = new Set(
+            availableProviders.flatMap(provider => 
+                provider.servicesOffered.map(id => id.toString())
+            )
+        );
+
+        return services.filter((service) => availableServiceIds.has(service._id.toString()));
+    }
+
+    return services;
+};
+
+// Search services by location
+export const searchServicesByLocation = async (location: string) => {
+  const providers = await Provider.find({
+    serviceableLocations: { $regex: new RegExp(location, "i") },
+    isActive: true,
+    isVerified: true,
+  }).populate({
+    path: "servicesOffered",
+    match: { isActive: true },
+    populate: {
+      path: "category",
+      select: "categoryName iconUrl",
+    },
+  });
+
+  const services = providers.flatMap(provider => provider.servicesOffered);
+  
+  // Deduplicate services
+  const uniqueServices = Array.from(new Map(services.map(service => [service._id.toString(), service])).values());
+
+  return uniqueServices;
+};
+
 
 // Get service details with available providers
 export const getServiceDetails = async (serviceId: string, location?: string) => {
