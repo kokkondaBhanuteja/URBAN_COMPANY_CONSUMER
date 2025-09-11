@@ -36,7 +36,7 @@ passport.use(
           email: profile.emails?.[0].value,
           userType: "consumer",
           isVerified: true, // Google email is already verified
-          mobileNumber: "", // Will be prompted later if needed
+          // No mobileNumber is provided here
         })
         await newUser.save()
 

@@ -4,8 +4,8 @@ import bcrypt from "bcryptjs"
 export interface IUser extends Document {
   userName: string
   email: string
-  mobileNumber: string
-  password?: string // Make password optional for Google OAuth users
+  mobileNumber?: string // Make mobileNumber optional
+  password?: string
   userType: "consumer" | "provider" | "admin"
   googleId?: string
   isVerified: boolean
@@ -24,12 +24,13 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
-    mobileNumber: { type: String, required: true, unique: true },
+    // Make mobileNumber optional by removing 'required: true' and 'unique: true'
+    mobileNumber: { type: String },
     password: { type: String },
     userType: {
       type: String,
       enum: ["consumer", "provider", "admin"],
-      default: "consumer", // Set a default user type
+      default: "consumer",
     },
     googleId: {
       type: String,

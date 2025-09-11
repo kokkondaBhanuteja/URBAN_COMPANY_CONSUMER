@@ -275,12 +275,8 @@ export function ConsumerAuthForm({ mode, onSubmit, loading = false, error }: Con
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full bg-transparent"
-          >
-            <a href="/api/auth/google">
+          <Button type="button" variant="outline" className="w-full bg-transparent" asChild>
+            <a href="/api/auth/google" className="flex items-center justify-center">
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
