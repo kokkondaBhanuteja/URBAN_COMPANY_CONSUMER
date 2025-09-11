@@ -14,15 +14,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [step, setStep] = useState(1)
-  // This state now holds the complete registration data to be used in the OTP step
   const [userData, setUserData] = useState<any>(null)
   const router = useRouter()
 
-  // This function now just triggers the OTP send
   const handleSignup = async (data: any) => {
     setLoading(true)
     setError("")
-    setUserData(data) // Save form data to state
+    setUserData(data)
 
     try {
       const response = await fetch("/api/auth/consumer/register", {
@@ -36,7 +34,7 @@ export default function SignupPage() {
         throw new Error(result.message)
       }
 
-      setStep(2) // Move to OTP step on success
+      setStep(2)
     } catch (error: any) {
       setError(error.message || "Registration failed. Please try again.")
     } finally {
@@ -44,7 +42,6 @@ export default function SignupPage() {
     }
   }
 
-  // This function now sends the OTP and all user data to the verify endpoint
   const handleOtpSubmit = async (otp: string) => {
     setLoading(true)
     setError("")
@@ -54,7 +51,6 @@ export default function SignupPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        // Send the OTP and the original user data
         body: JSON.stringify({ ...userData, otp }),
       })
 
@@ -63,11 +59,10 @@ export default function SignupPage() {
       if (!response.ok) {
         throw new Error(data.message || "OTP verification failed")
       }
-
-      // The verify endpoint now returns the user and sets the cookie,
-      // so we can set the user in localStorage and redirect.
+      
       authService.setUser(data.user)
-      router.push("/dashboard")
+      // Redirect to homepage instead of dashboard
+      router.push("/")
     } catch (error: any) {
       setError(error.message || "OTP verification failed. Please try again.")
     } finally {

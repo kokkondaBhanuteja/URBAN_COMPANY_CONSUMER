@@ -1,15 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button" 
 import { Search } from "lucide-react"
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-white">
-      <Header />
       <main className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="py-12">

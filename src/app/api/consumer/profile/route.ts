@@ -7,8 +7,12 @@ export async function GET(req: NextRequest) {
   await connectDb()
 
   try {
-    const headersWithUser = await consumerMiddleware(req)
-    const userId = headersWithUser.get("x-user-id")
+    const middlewareResponse = await consumerMiddleware(req);
+    if (middlewareResponse instanceof NextResponse) {
+        return middlewareResponse;
+    }
+
+    const userId = middlewareResponse.get("x-user-id")
 
     if (!userId) {
       return NextResponse.json({ message: "User ID not found" }, { status: 401 })
@@ -30,8 +34,11 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   await connectDb()
   try {
-    const headersWithUser = await consumerMiddleware(req)
-    const userId = headersWithUser.get("x-user-id")
+    const middlewareResponse = await consumerMiddleware(req);
+    if (middlewareResponse instanceof NextResponse) {
+        return middlewareResponse;
+    }
+    const userId = middlewareResponse.get("x-user-id")
 
     if (!userId) {
       return NextResponse.json({ message: "User ID not found" }, { status: 401 })

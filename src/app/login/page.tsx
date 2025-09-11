@@ -20,8 +20,8 @@ export default function LoginPage() {
     try {
       await authService.login(data.email, data.password)
 
-      // Redirect to dashboard page
-      router.push("/dashboard")
+      // Force a full redirect to the homepage to ensure header state updates
+      window.location.href = "/"
     } catch (error: any) {
       setError(error.message || "Login failed. Please try again.")
     } finally {
