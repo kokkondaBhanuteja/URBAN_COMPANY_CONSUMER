@@ -8,11 +8,15 @@ export async function GET(req: NextRequest) {
   await connectDb()
 
   try {
-    const headersWithUser = await consumerMiddleware(req)
-    const userId = headersWithUser.get("x-user-id")
+    // Correctly handle the middleware response, just like in your profile route
+    const middlewareResponse = await consumerMiddleware(req)
+    if (middlewareResponse instanceof NextResponse) {
+      return middlewareResponse;
+    }
+    const userId = middlewareResponse.get("x-user-id")
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found" }, { status: 401 })
+      return NextResponse.json({ message: "User ID not found in headers" }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -20,14 +24,21 @@ export async function GET(req: NextRequest) {
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "10")
 
-    const query: any = { consumerId: new Types.ObjectId(userId) }
+    // FIX: Use the correct field name 'userId' from your bookingModel
+    const query: any = { userId: new Types.ObjectId(userId) }
     if (status) {
       query.bookingStatus = status
     }
 
     const bookings = await Booking.find(query)
       .populate("serviceId", "serviceName basePrice")
-      .populate("providerId", "userId")
+      .populate({
+        path: 'providerId',
+        populate: {
+           path: 'userId',
+           select: 'userName' 
+        }
+      })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -53,21 +64,30 @@ export async function POST(req: NextRequest) {
   await connectDb()
 
   try {
-    const headersWithUser = await consumerMiddleware(req)
-    const userId = headersWithUser.get("x-user-id")
+    // Correctly handle the middleware response
+    const middlewareResponse = await consumerMiddleware(req)
+     if (middlewareResponse instanceof NextResponse) {
+      return middlewareResponse;
+    }
+    const userId = middlewareResponse.get("x-user-id")
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found" }, { status: 401 })
+      return NextResponse.json({ message: "User ID not found in headers" }, { status: 401 })
     }
 
     const bookingData = await req.json()
 
+    // FIX: Use the correct field name 'userId' from your bookingModel
     const booking = new Booking({
-      consumerId: new Types.ObjectId(userId),
+      userId: new Types.ObjectId(userId),
       serviceId: new Types.ObjectId(bookingData.serviceId),
       serviceAddress: bookingData.serviceAddress,
       scheduledAt: new Date(bookingData.scheduledAt),
-      totalPrice: bookingData.totalPrice,
+      // Assuming 'pricing' is part of your model based on bookingModel.ts
+      pricing: {
+        basePrice: bookingData.totalPrice, // Or calculate as needed
+        finalAmount: bookingData.totalPrice,
+      },
       specialInstructions: bookingData.specialInstructions,
     })
 

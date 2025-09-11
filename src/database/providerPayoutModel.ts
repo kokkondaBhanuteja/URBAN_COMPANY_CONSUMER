@@ -25,7 +25,7 @@ const providerPayoutSchema = new Schema<IProviderPayout>(
       type: String,
       enum: ["pending", "processed", "failed"],
       default: "pending",
-      index: true,
+      // FIX: Removed the duplicate inline index definition. The one below is sufficient.
     },
     paymentMethod: {
       type: String,
