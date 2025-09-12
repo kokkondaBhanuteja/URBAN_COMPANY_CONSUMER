@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
@@ -14,6 +15,7 @@ import { BookingForm } from "@/components/consumer/booking-form"
 import { useCart } from "@/lib/cart-context"
 import type { PaymentResult } from "@/lib/payments"
 import { authService } from "@/services/authService"
+import { toast } from "sonner"
 
 export default function CartPage() {
   const { items, totalItems, totalAmountSubunits, updateQuantity, removeItem, clearCart } = useCart()
@@ -22,6 +24,7 @@ export default function CartPage() {
   const [bookingData, setBookingData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const user = authService.getUser()
+  const router = useRouter()
 
   const formatPrice = (priceSubunits: number) => {
     return (priceSubunits / 100).toLocaleString("en-IN", {
@@ -71,47 +74,63 @@ export default function CartPage() {
       setShowCheckout(true)
       setShowBookingForm(false)
     } catch (error: any) {
-      console.error("Booking creation error:", error)
-      alert(error.message || "Failed to create booking. Please try again.")
+      toast.error("Booking creation failed", {
+        description: error.message || "Please try again.",
+      })
     } finally {
       setLoading(false)
     }
   }
 
+  // MODIFIED: This function now only handles the backend API calls.
+  // It no longer touches the UI state.
   const handlePaymentSuccess = async (result: PaymentResult) => {
     if (result.success && result.paymentId) {
       try {
-        setLoading(true);
+        setLoading(true); // You can use this to show a spinner on the success modal
+        // 1. Save payment details to the database
         await fetch("/api/consumer/payments", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
             bookingId: bookingData.bookingId,
             amount: totalAmountSubunits / 100,
-            paymentMethod: "credit_card", // Or get this dynamically
+            paymentMethod: "credit_card",
             paymentStatus: "successful",
             transactionId: result.paymentId,
           }),
         });
 
-        // Clear cart and reset state after successful payment and recording
-        clearCart();
-        setShowCheckout(false);
-        setShowBookingForm(false);
-        setBookingData(null);
-        console.log("Payment successful and recorded:", result);
-        // You might want to redirect to a success page here
-        // router.push('/booking-success');
+        // 2. Trigger provider assignment
+        await fetch(`/api/consumer/bookings/${bookingData.bookingId}/assign-provider`, {
+            method: "POST",
+            credentials: "include",
+        });
+
+        toast.success("Payment successful!", {
+          description: "We are now assigning a top-rated professional for your service.",
+        });
+
       } catch (error) {
         console.error("Failed to save payment details:", error);
-        // Handle the error appropriately, e.g., show a message to the user
+        toast.error("Payment Recording Failed", {
+          description: "Your payment was successful but we had trouble recording it. Please contact support.",
+        })
       } finally {
         setLoading(false);
       }
     }
+  };
+
+  // NEW: This function handles clearing the cart and redirecting the user
+  // after they have seen the success modal and clicked "Continue Shopping".
+  const handleCheckoutClose = () => {
+    clearCart();
+    setShowCheckout(false);
+    setShowBookingForm(false);
+    setBookingData(null);
+    router.push('/bookings'); // Redirect to a relevant page like My Bookings
   };
 
   const paymentItems = items.map((item) => ({
@@ -120,6 +139,8 @@ export default function CartPage() {
     unitPrice: item.unitPriceSubunits,
   }))
 
+  // The rest of your JSX remains largely the same, but we update the
+  // `PaymentSheet` props.
   if (showCheckout) {
     return (
       <div className="min-h-screen bg-background">
@@ -131,7 +152,7 @@ export default function CartPage() {
               currency="INR"
               items={paymentItems}
               onSuccess={handlePaymentSuccess}
-              onCancel={() => setShowCheckout(false)}
+              onCancel={handleCheckoutClose} // UPDATED: Use the new handler here
               prefill={{
                 name: user?.fullName,
                 email: user?.email,
@@ -144,6 +165,7 @@ export default function CartPage() {
     )
   }
 
+  // No changes needed for the rest of the file...
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-background">
@@ -156,7 +178,6 @@ export default function CartPage() {
               </Button>
               <h1 className="text-2xl font-bold text-foreground text-balance">Complete Your Booking</h1>
             </div>
-
             <AuthGuard>
               <BookingForm
                 cartItems={items}
@@ -217,19 +238,14 @@ export default function CartPage() {
                 <Card key={`${item.serviceId}-${item.optionId}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
-                      {/* Service Image */}
                       <div className="w-20 h-20 relative rounded-lg overflow-hidden flex-shrink-0">
                         <Image src={item.image || "/placeholder.svg"} alt={item.title} fill className="object-cover" />
                       </div>
-
-                      {/* Service Details */}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground text-balance">{item.title}</h3>
                         <p className="text-sm text-muted-foreground mt-1">{item.optionTitle}</p>
                         <p className="text-lg font-bold text-primary mt-2">{formatPrice(item.unitPriceSubunits)}</p>
                       </div>
-
-                      {/* Quantity Controls */}
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2 border rounded-lg">
                           <Button
@@ -250,7 +266,6 @@ export default function CartPage() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
-
                         <Button
                           variant="ghost"
                           size="sm"
@@ -261,8 +276,6 @@ export default function CartPage() {
                         </Button>
                       </div>
                     </div>
-
-                    {/* Item Total */}
                     <div className="mt-4 pt-4 border-t">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">
@@ -283,7 +296,6 @@ export default function CartPage() {
               <Card className="sticky top-24">
                 <CardContent className="p-6">
                   <h2 className="text-xl font-semibold text-foreground mb-4">Order Summary</h2>
-
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Items ({totalItems})</span>
@@ -300,7 +312,6 @@ export default function CartPage() {
                       </div>
                     </div>
                   </div>
-
                   <div className="space-y-3">
                     <Button onClick={handleProceedToBooking} className="w-full">
                       Proceed to Booking
@@ -311,8 +322,6 @@ export default function CartPage() {
                       </Button>
                     </Link>
                   </div>
-
-                  {/* Trust Indicators */}
                   <div className="mt-6 pt-6 border-t">
                     <div className="text-sm text-muted-foreground space-y-2">
                       <div className="flex items-center space-x-2">
@@ -335,7 +344,6 @@ export default function CartPage() {
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   )

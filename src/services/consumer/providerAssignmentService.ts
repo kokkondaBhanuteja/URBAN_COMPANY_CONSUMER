@@ -4,7 +4,7 @@ import Booking from "@/database/bookingModel";
 import Provider from "@/database/ProviderModel";
 import { IBooking } from "@/database/bookingModel";
 import { IProvider } from "@/database/ProviderModel";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 /**
  * Finds providers who are available for a given booking.
@@ -25,13 +25,6 @@ async function findAvailableProviders(booking: IBooking): Promise<IProvider[]> {
     // Step 2: Availability Check (Schedule and Conflicting Bookings)
     const availableProviders = [];
     for (const provider of potentialProviders) {
-        // Check against the provider's general availability
-        const isAvailableInSchedule = provider.availability.some(slot => 
-            !slot.isUnavailable && scheduledAt >= slot.startTime && scheduledAt <= slot.endTime
-        );
-
-        if (!isAvailableInSchedule) continue;
-
         // Check for conflicting bookings around the same time (e.g., within a 2-hour window)
         const conflictingBooking = await Booking.findOne({
             providerId: provider._id,
@@ -84,14 +77,20 @@ async function rankProviders(providers: IProvider[]): Promise<IProvider[]> {
 export async function assignProviderToBooking(bookingId: string) {
     const booking = await Booking.findById(bookingId).populate('serviceId');
 
-    if (!booking || booking.bookingStatus !== 'requested') {
-        throw new Error("Booking not found or is not in a 'requested' state.");
+    if (!booking) {
+        throw new Error("Booking not found.");
     }
+
+    if (booking.providerId || (booking.bookingStatus !== 'requested' && booking.bookingStatus !== 'confirmed')) {        console.warn(`Booking ${bookingId} is not in a 'requested' state. Current state: ${booking.bookingStatus}`);
+        return;
+    }
+
 
     const availableProviders = await findAvailableProviders(booking);
 
     if (availableProviders.length === 0) {
         console.warn(`No available providers found for booking: ${bookingId}`);
+        // Optional: Handle this case, e.g., by setting booking status to 'pending_assignment'
         return;
     }
 

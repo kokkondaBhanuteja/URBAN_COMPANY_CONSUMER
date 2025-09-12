@@ -9,11 +9,51 @@ import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCart } from "@/lib/cart-context"
-import { getService, type Service } from "@/lib/content"
+import type { Service } from "@/lib/content" // Keep the service type
+
+// New function to fetch a single service by its ID
+const fetchServiceById = async (id: string): Promise<Service | null> => {
+  if (!id) return null
+  try {
+    const response = await fetch(`/api/consumer/services/${id}`)
+    if (!response.ok) {
+      throw new Error("Failed to fetch service details")
+    }
+    const data = await response.json()
+
+    if (!data.service) return null;
+
+    // Transform the API response to match the frontend 'Service' interface
+    return {
+      id: data.service._id.toString(),
+      slug: data.service.serviceName.toLowerCase().replace(/\s+/g, "-"),
+      categorySlug: data.service.category?.categoryName.toLowerCase().replace(/\s+/g, "-") || 'general',
+      title: data.service.serviceName,
+      city: "Available", // You can enhance this if location data is available
+      rating: data.providers.length > 0 ? data.providers[0].averageRating : 4.5, // Example rating
+      ratingCount: data.providers.length * 15, // Example rating count
+      images: [
+        data.service.imageUrl ||
+          `/placeholder.svg?height=200&width=300&query=${encodeURIComponent(data.service.serviceName)}`,
+      ],
+      options: [
+        {
+          id: data.service._id.toString(),
+          title: data.service.serviceName,
+          priceSubunits: data.service.basePrice * 100,
+        },
+      ],
+      summary: data.service.description,
+    }
+  } catch (error) {
+    console.error("Error fetching service:", error)
+    return null
+  }
+}
 
 export default function ServicePage() {
   const params = useParams()
-  const slug = params.slug as string
+  const serviceId = params.serviceId as string
   const { addItem } = useCart()
 
   const [service, setService] = useState<Service | null>(null)
@@ -22,18 +62,15 @@ export default function ServicePage() {
 
   useEffect(() => {
     async function loadService() {
-      try {
-        const serviceData = await getService(slug)
-        setService(serviceData)
-      } catch (error) {
-        console.error("Failed to load service:", error)
-      } finally {
-        setLoading(false)
-      }
+      if (!serviceId) return
+      setLoading(true)
+      const serviceData = await fetchServiceById(serviceId)
+      setService(serviceData)
+      setLoading(false)
     }
 
     loadService()
-  }, [slug])
+  }, [serviceId])
 
   const handleAddToCart = (optionId: string) => {
     if (!service) return
@@ -94,7 +131,6 @@ export default function ServicePage() {
   return (
     <div className="min-h-screen bg-white">
       <NavigationHeader />
-
       <main className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -185,7 +221,6 @@ export default function ServicePage() {
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   )

@@ -8,25 +8,27 @@ import { Calendar, MapPin, Clock } from "lucide-react"
 import Link from "next/link"
 import { BookingDetailsModal } from "./booking-details-modal"
 
+// ... (interfaces and helper functions remain the same)
 interface Booking {
-  _id: string
+  _id: string;
   serviceId: {
-    serviceName: string
-  }
-  bookingStatus: string
-  scheduledAt: string
+    serviceName: string;
+  };
+  bookingStatus: string;
+  scheduledAt: string;
   pricing: {
-    finalAmount: number
-  }
+    finalAmount: number;
+  };
   serviceAddress: {
-    addressLine1: string
-    city: string
-  }
+    addressLine1: string;
+    city: string;
+  };
 }
 
 interface RecentBookingsProps {
-  bookings: Booking[]
+  bookings: Booking[];
 }
+
 
 export function RecentBookings({ bookings }: RecentBookingsProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -45,41 +47,41 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "bg-primary text-primary-foreground"
+        return "bg-primary text-primary-foreground";
       case "completed":
-        return "bg-accent text-accent-foreground"
+        return "bg-accent text-accent-foreground";
       case "requested":
-        return "bg-secondary text-secondary-foreground"
+        return "bg-secondary text-secondary-foreground";
       case "cancelled_by_user":
       case "cancelled_by_provider":
-        return "bg-destructive text-destructive-foreground"
+        return "bg-destructive text-destructive-foreground";
       default:
-        return "bg-muted text-muted-foreground"
+        return "bg-muted text-muted-foreground";
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
-    })
-  }
+    });
+  };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   return (
     <>
@@ -104,34 +106,39 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
               {bookings.map((booking) => (
                 <div
                   key={booking._id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => handleBookingClick(booking)}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-balance">{booking.serviceId.serviceName}</h4>
-                      <Badge className={getStatusColor(booking.bookingStatus)}>
-                        {booking.bookingStatus.replace("_", " ")}
-                      </Badge>
-                    </div>
+                  <div
+                    className="flex items-start justify-between cursor-pointer"
+                    onClick={() => handleBookingClick(booking)}
+                  >
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-balance">{booking.serviceId.serviceName}</h4>
+                        <Badge className={getStatusColor(booking.bookingStatus)}>
+                          {booking.bookingStatus.replace("_", " ")}
+                        </Badge>
+                      </div>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(booking.scheduledAt)}
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(booking.scheduledAt)}</div>
+                        <div className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatTime(booking.scheduledAt)}</div>
+                        <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{booking.serviceAddress.city}</div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(booking.scheduledAt)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {booking.serviceAddress.city}
-                      </div>
+                      <div className="text-sm font-medium">{formatCurrency(booking.pricing.finalAmount)}</div>
                     </div>
-
-                    <div className="text-sm font-medium">{formatCurrency(booking.pricing.finalAmount)}</div>
                   </div>
+                  
+                  {/* ✨ ADD THIS BLOCK ✨ */}
+                  {booking.bookingStatus === 'completed' && (
+                    <div className="mt-4 pt-4 border-t flex justify-end">
+                      <Button asChild size="sm">
+                        <Link href={`/review/${booking._id}`}>Leave a Review</Link>
+                      </Button>
+                    </div>
+                  )}
+                  {/* ✨ END OF BLOCK ✨ */}
+
                 </div>
               ))}
             </div>
@@ -144,5 +151,5 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
         onClose={handleCloseModal}
       />
     </>
-  )
+  );
 }

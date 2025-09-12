@@ -42,6 +42,9 @@ export function BookingForm({ cartItems, totalAmount, onSubmit, loading = false 
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddress, setSelectedAddress] = useState<string>("")
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -68,6 +71,32 @@ export function BookingForm({ cartItems, totalAmount, onSubmit, loading = false 
 
     fetchAddresses();
   }, []);
+
+  useEffect(() => {
+    const fetchAvailability = async () => {
+        if (formData.scheduledDate && cartItems.length > 0) {
+            setSlotsLoading(true);
+            try {
+                const serviceId = cartItems[0].serviceId;
+                const location = formData.serviceAddress.city;
+                const response = await fetch(`/api/consumer/services/${serviceId}/availability?date=${formData.scheduledDate}&location=${location}`);
+                if(response.ok) {
+                    const slots = await response.json();
+                    setAvailableSlots(slots);
+                } else {
+                    setAvailableSlots([]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch availability:", error);
+                setAvailableSlots([]);
+            } finally {
+                setSlotsLoading(false);
+            }
+        }
+    };
+
+    fetchAvailability();
+  }, [formData.scheduledDate, formData.serviceAddress.city, cartItems]);
 
 
   const validateForm = () => {
@@ -210,21 +239,15 @@ export function BookingForm({ cartItems, totalAmount, onSubmit, loading = false 
                 <Select
                   value={formData.scheduledTime}
                   onValueChange={(value) => updateFormData("scheduledTime", value)}
+                  disabled={slotsLoading || availableSlots.length === 0}
                 >
                   <SelectTrigger className={errors.scheduledTime ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select time" />
+                    <SelectValue placeholder={slotsLoading ? "Loading slots..." : "Select time"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="09:00">9:00 AM</SelectItem>
-                    <SelectItem value="10:00">10:00 AM</SelectItem>
-                    <SelectItem value="11:00">11:00 AM</SelectItem>
-                    <SelectItem value="12:00">12:00 PM</SelectItem>
-                    <SelectItem value="13:00">1:00 PM</SelectItem>
-                    <SelectItem value="14:00">2:00 PM</SelectItem>
-                    <SelectItem value="15:00">3:00 PM</SelectItem>
-                    <SelectItem value="16:00">4:00 PM</SelectItem>
-                    <SelectItem value="17:00">5:00 PM</SelectItem>
-                    <SelectItem value="18:00">6:00 PM</SelectItem>
+                    {availableSlots.map((slot) => (
+                        <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.scheduledTime && <p className="text-sm text-destructive mt-1">{errors.scheduledTime}</p>}
