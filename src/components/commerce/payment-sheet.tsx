@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle, Receipt, ArrowLeft } from "lucide-react"
+import { CheckCircle, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PaymentButton } from "./payment-button"
@@ -88,10 +88,6 @@ export function PaymentSheet({ amountSubunits, currency = "INR", items, onSucces
             <Button onClick={handleBackToShopping} className="w-full bg-uc-purple hover:bg-uc-purple-dark text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Continue Shopping
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              <Receipt className="w-4 h-4 mr-2" />
-              Download Receipt
             </Button>
           </div>
         </CardContent>
