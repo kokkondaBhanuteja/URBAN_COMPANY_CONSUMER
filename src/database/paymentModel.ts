@@ -4,7 +4,7 @@ export interface IPayment extends Document {
   bookingId: Types.ObjectId;
   userId: Types.ObjectId;
   amount: number;
-  paymentMethod: "credit_card" | "upi" | "net_banking" | "cod";
+  paymentMethod: string; // Changed from enum to string
   paymentStatus: "pending" | "successful" | "failed";
   transactionId?: string;
   createdAt: Date;
@@ -27,8 +27,7 @@ const paymentSchema = new Schema<IPayment>(
     },
     amount: { type: Number, required: true },
     paymentMethod: {
-      type: String,
-      enum: ["credit_card", "upi", "net_banking", "cod"],
+      type: String, // Changed from enum to string
     },
     paymentStatus: {
       type: String,

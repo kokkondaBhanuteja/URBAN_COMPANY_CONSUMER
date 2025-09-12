@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
-import { Button } from "@/components/ui/button"
+import { Button } from "components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { PaymentSheet } from "@/components/commerce/payment-sheet"
 import { AuthGuard } from "@/components/consumer/auth-guard"
@@ -82,13 +82,16 @@ export default function CartPage() {
     }
   }
 
-  // MODIFIED: This function now only handles the backend API calls.
-  // It no longer touches the UI state.
   const handlePaymentSuccess = async (result: PaymentResult) => {
     if (result.success && result.paymentId) {
       try {
-        setLoading(true); // You can use this to show a spinner on the success modal
-        // 1. Save payment details to the database
+        setLoading(true);
+
+        // Fetch payment details from your new API route
+        const paymentDetailsResponse = await fetch(`/api/razorpay/${result.paymentId}`);
+        const paymentDetails = await paymentDetailsResponse.json();
+        
+        // 1. Save payment details to the database with the fetched method
         await fetch("/api/consumer/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,7 +99,7 @@ export default function CartPage() {
           body: JSON.stringify({
             bookingId: bookingData.bookingId,
             amount: totalAmountSubunits / 100,
-            paymentMethod: "credit_card",
+            paymentMethod: paymentDetails.method || 'online', // Use fetched method
             paymentStatus: "successful",
             transactionId: result.paymentId,
           }),
@@ -107,7 +110,8 @@ export default function CartPage() {
             method: "POST",
             credentials: "include",
         });
-        // 3. Create provider payout by calling the new API route
+
+        // 3. Create provider payout
         await fetch("/api/payouts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -130,14 +134,12 @@ export default function CartPage() {
     }
   };
 
-  // NEW: This function handles clearing the cart and redirecting the user
-  // after they have seen the success modal and clicked "Continue Shopping".
   const handleCheckoutClose = () => {
     clearCart();
     setShowCheckout(false);
     setShowBookingForm(false);
     setBookingData(null);
-    router.push('/bookings'); // Redirect to a relevant page like My Bookings
+    router.push('/bookings');
   };
 
   const paymentItems = items.map((item) => ({
@@ -146,8 +148,6 @@ export default function CartPage() {
     unitPrice: item.unitPriceSubunits,
   }))
 
-  // The rest of your JSX remains largely the same, but we update the
-  // `PaymentSheet` props.
   if (showCheckout) {
     return (
       <div className="min-h-screen bg-background">
@@ -159,7 +159,7 @@ export default function CartPage() {
               currency="INR"
               items={paymentItems}
               onSuccess={handlePaymentSuccess}
-              onCancel={handleCheckoutClose} // UPDATED: Use the new handler here
+              onCancel={handleCheckoutClose}
               prefill={{
                 name: user?.fullName,
                 email: user?.email,
@@ -172,7 +172,6 @@ export default function CartPage() {
     )
   }
 
-  // No changes needed for the rest of the file...
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-background">
