@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { CartProvider } from "@/lib/cart-context"
+import { LocationProvider } from "@/lib/location-context" // Import LocationProvider
 import { Suspense } from "react"
 import { Providers } from "@/components/providers"
 import "./globals.css"
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body className={`font-sans ${inter.variable} antialiased`}>
         <Providers>
           <Suspense fallback={null}>
-            <CartProvider>{children}</CartProvider>
+            <LocationProvider>
+              <CartProvider>{children}</CartProvider>
+            </LocationProvider>
           </Suspense>
         </Providers>
       </body>

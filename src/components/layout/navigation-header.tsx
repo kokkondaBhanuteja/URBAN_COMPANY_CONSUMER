@@ -21,7 +21,9 @@ import {
 import { authService } from "@/services/authService"
 import { useCart } from "@/lib/cart-context"
 import { useDebounce } from "@/hooks/use-debounce"
+import { LocationSelector } from "./location-selector" // Import the new component
 import type { Service } from "@/lib/content"
+import { useLocation } from "@/lib/location-context"; // Import useLocation
 
 interface AuthUser {
   id: string
@@ -37,8 +39,9 @@ export function NavigationHeader() {
   const router = useRouter()
   const { totalItems } = useCart()
 
+  const { location } = useLocation(); // Get location from context
   const [searchQuery, setSearchQuery] = useState("")
-  const [locationQuery, setLocationQuery] = useState("Warangal")
+  const locationQuery = location?.city || ""; // Use location from context
   const [searchResults, setSearchResults] = useState<Service[]>([])
   const [isSearchLoading, setIsSearchLoading] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -82,12 +85,12 @@ export function NavigationHeader() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() || locationQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&location=${encodeURIComponent(locationQuery.trim())}`)
       setIsPopoverOpen(false)
     }
   }
-  
+
   const getInitials = (name: string) => (name ? name.split(" ").map((n) => n[0]).join("").toUpperCase() : "")
 
   const UserNav = () => (
@@ -123,7 +126,7 @@ export function NavigationHeader() {
 
           <div className="hidden md:flex flex-1 max-w-xl mx-auto">
             <div className="flex w-full items-center rounded-lg border bg-background shadow-sm">
-              <div className="flex items-center pl-3 pr-2 border-r"><MapPin className="h-4 w-4 text-muted-foreground" /><Input placeholder="Location" value={locationQuery} onChange={(e) => setLocationQuery(e.target.value)} className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 w-32 text-sm" /></div>
+              <LocationSelector />
               <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
                   <form onSubmit={handleSearchSubmit} className="relative w-full">

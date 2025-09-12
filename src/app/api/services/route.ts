@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
     let services: any[] = []
 
     if (location && !query && !categorySlug) {
+      // Since the logic in serviceDiscoveryService now handles adding the location,
+      // we can directly call the search function.
+      // This also ensures that if a user lands on the homepage for a new city,
+      // that city gets added to our serviceable locations.
       services = await searchServicesByLocation(location)
     } else if (query) {
       services = await searchServices(query, location || undefined)

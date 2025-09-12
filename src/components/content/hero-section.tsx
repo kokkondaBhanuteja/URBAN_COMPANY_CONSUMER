@@ -1,57 +1,93 @@
-import { Button } from "@/components/ui/button"
-import { MapPin, ChevronDown } from "lucide-react"
+"use client"
 
-export function HeroSection() {
+import Image from "next/image"
+import { CategoryCard } from "@/components/content/category-card"
+import { Skeleton } from "@/components/ui/skeleton"
+import type { Category } from "@/lib/content"
+
+// The Hero Section now accepts categories and their loading state as props
+interface HeroSectionProps {
+  categories: Category[] | undefined
+  isLoading: boolean
+}
+
+export function HeroSection({ categories, isLoading }: HeroSectionProps) {
   return (
-    <section className="bg-gradient-to-br from-purple-50 to-blue-50 py-12 md:py-16 lg:py-20">
+    <section className="bg-background  py-2">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Left Content */}
-          <div className="text-center lg:text-left">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 mb-4 lg:mb-6 text-balance leading-tight">
-              Home services at your <span className="text-uc-purple">doorstep</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+          {/* Left Column: Heading and Categories */}
+          <div className="flex flex-col text-center lg:text-left">
+            <h1 className="text-3xl font-900 text-black mb-8 text-balance leading-tight">
+              Home services at your doorstep
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-600 mb-6 lg:mb-8 text-pretty max-w-2xl mx-auto lg:mx-0">
-              Quality services by trusted professionals. Book online and get your work done hassle-free.
-            </p>
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6 text-left">
+                What are you looking for?
+              </h2>
 
-            {/* Location Selector */}
-            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6 lg:mb-8">
-              <div className="flex items-center space-x-2 bg-white rounded-lg px-4 py-3 border border-gray-200 w-full sm:w-auto sm:min-w-[200px] shadow-sm">
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <span className="text-gray-700 flex-1">Dadar, Mumbai</span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              </div>
-              <Button className="bg-uc-purple hover:bg-uc-purple-dark text-white px-6 sm:px-8 py-3 w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-200">
-                Book Now
-              </Button>
+              {isLoading ? (
+                // A clean skeleton loader for a better loading experience
+                <div className="grid grid-cols-4 gap-5">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="flex flex-col items-center space-y-2">
+                      <Skeleton className="h-16 w-16 rounded-lg" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // The grid of category cards, displayed when data is ready
+                <div className="grid grid-cols-4 gap-y-6 gap-x-4">
+                  {categories?.slice(0, 8).map((category) => ( // Show up to 8 categories
+                    <CategoryCard key={category.id} category={category} />
+                  ))}
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Trust Indicators */}
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 text-center max-w-sm mx-auto lg:mx-0">
-              <div className="bg-white/50 rounded-lg p-4 backdrop-blur-sm">
-                <div className="text-xl sm:text-2xl font-bold text-uc-purple">4.8★</div>
-                <div className="text-xs sm:text-sm text-gray-600">Service Rating</div>
+          {/* Right Column: The Image Collage */}
+          <div className="relative order-first lg:order-last h-[500px] lg:h-[600px]">
+            {/* Outer wrapper with rounded corners */}
+            <div className="grid grid-cols-2 grid-rows-2 gap-1 h-full rounded-2xl overflow-hidden shadow-lg">
+              {/* Main vertical image */}
+              <div className="relative col-span-1 row-span-2 group overflow-hidden">
+                <Image
+                  src="/office_cleaning.jpg"
+                  alt="A professional Office Cleaning service in action"
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
-              <div className="bg-white/50 rounded-lg p-4 backdrop-blur-sm">
-                <div className="text-xl sm:text-2xl font-bold text-uc-purple">12M+</div>
-                <div className="text-xs sm:text-sm text-gray-600">Happy Customers</div>
+
+              {/* Top-right image */}
+              <div className="relative col-span-1 row-span-1 group overflow-hidden ">
+                <Image
+                  src="/air_conditioning.jpg"
+                  alt="A person receiving a relaxing massage"
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              </div>
+
+              {/* Bottom-right image */}
+              <div className="relative col-span-1 row-span-1 group overflow-hidden">
+                <Image
+                  src="/plumber.jpg"
+                  alt="A technician repairing an air conditioner unit"
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
             </div>
           </div>
 
-          {/* Right Image */}
-          <div className="relative order-first lg:order-last">
-            <div className="aspect-square relative rounded-2xl overflow-hidden shadow-2xl">
-              <img
-                src="/professional-service-provider-at-customer-home.jpg"
-                alt="Professional service at home"
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

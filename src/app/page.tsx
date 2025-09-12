@@ -3,54 +3,30 @@
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { HeroSection } from "@/components/content/hero-section"
-import { CategoryCard } from "@/components/content/category-card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getCategories, type Category } from "@/lib/content"
+import { useLocation } from "@/lib/location-context"
 import { useQuery } from "@tanstack/react-query"
 
 export default function HomePage() {
-  const { data: categories, isLoading } = useQuery<Category[]>({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
+  const { location, loading: locationLoading } = useLocation()
 
+  // Fetches categories based on the user's location
+  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
+    queryKey: ["categories", location?.city],
+    queryFn: () => getCategories(location?.city),
+    enabled: !locationLoading && !!location,
+  })
+
+  // Combines loading states for a seamless skeleton loading experience
+  const isLoading = locationLoading || categoriesLoading
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <NavigationHeader />
-
       <main>
-        <HeroSection />
-
-        {/* What are you looking for? */}
-        <section className="py-12 md:py-16 lg:py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8 sm:mb-12 text-balance text-center lg:text-left">
-              What are you looking for?
-            </h2>
-
-            {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="h-32 sm:h-40 w-full rounded-lg" />
-                    <Skeleton className="h-4 w-3/4 mx-auto" />
-                    <Skeleton className="h-3 w-1/2 mx-auto" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-                {categories?.map((category) => (
-                  <CategoryCard key={category.id} category={category} />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
+        {/* The new HeroSection now receives the data and handles all layout and display logic */}
+        <HeroSection categories={categories} isLoading={isLoading} />
       </main>
-
       <Footer />
     </div>
   )

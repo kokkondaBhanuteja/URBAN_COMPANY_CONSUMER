@@ -107,6 +107,13 @@ export default function CartPage() {
             method: "POST",
             credentials: "include",
         });
+        // 3. Create provider payout by calling the new API route
+        await fetch("/api/payouts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ bookingId: bookingData.bookingId }),
+          });
 
         toast.success("Payment successful!", {
           description: "We are now assigning a top-rated professional for your service.",

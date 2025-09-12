@@ -14,7 +14,7 @@ export interface IProvider extends Document {
   isActive: boolean;
   onboardingDate: Date;
   servicesOffered: Types.ObjectId[]; // Ref to Service
-  serviceableLocations: string; 
+  serviceableLocations:  string[]; // e.g., city names or zip codes 
   availability: IAvailability[];
   createdAt: Date;
   updatedAt: Date;

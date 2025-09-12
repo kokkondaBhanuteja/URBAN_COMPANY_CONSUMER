@@ -64,7 +64,10 @@ function SearchResults() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12"><SearchIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" /><p className="text-gray-600">No services found matching your search.</p></div>
+            <div className="text-center py-12">
+              <img src="/no_data.svg" alt="No Data Found" width={500} className="mx-auto mb-4"/>
+              <p className="text-gray-600">No services found matching your search.</p>
+            </div>
           )}
         </div>
       </main>

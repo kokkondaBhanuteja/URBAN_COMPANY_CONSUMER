@@ -53,31 +53,40 @@ export interface Template {
 // Artificial latency for realistic loading states
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export async function getCategories(): Promise<Category[]> {
-  const response = await fetch("/api/categories")
-  if (!response.ok) {
-    throw new Error("Failed to fetch categories")
+export async function getCategories(city?: string): Promise<Category[]> {
+  const params = new URLSearchParams();
+  if (city) {
+    params.append("location", city);
   }
-  return response.json()
+  const response = await fetch(`/api/categories?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch categories");
+  }
+  return response.json();
 }
+
 
 export async function getCategory(slug: string): Promise<Category | null> {
   const categories = await getCategories()
   return categories.find((cat) => cat.slug === slug) || null
 }
 
-export async function getServices(categorySlug?: string): Promise<Service[]> {
-  const params = new URLSearchParams()
+export async function getServices(categorySlug?: string, city?: string): Promise<Service[]> {
+  const params = new URLSearchParams();
   if (categorySlug) {
-    params.append("category", categorySlug)
+    params.append("category", categorySlug);
+  }
+  if (city) {
+    params.append("location", city);
   }
 
-  const response = await fetch(`/api/services?${params.toString()}`)
+  const response = await fetch(`/api/services?${params.toString()}`);
   if (!response.ok) {
-    throw new Error("Failed to fetch services")
+    throw new Error("Failed to fetch services");
   }
-  return response.json()
+  return response.json();
 }
+
 
 export async function getService(slug: string): Promise<Service | null> {
   const services = await getServices()
