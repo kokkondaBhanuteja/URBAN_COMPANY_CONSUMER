@@ -11,18 +11,16 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get("q")
     const location = searchParams.get("location")
 
-    let services = []
+    let services: any[] = []
 
     if (location && !query && !categorySlug) {
-      // Search by location only
-      services = await searchServicesByLocation(location);
+      services = await searchServicesByLocation(location)
     } else if (query) {
-      // Search by query (with or without location)
       services = await searchServices(query, location || undefined)
     } else if (categorySlug) {
-      // Get category by slug first
       const category = await ServiceCategory.findOne({
-        categoryName: { $regex: new RegExp(categorySlug.replace("-", " "), "i") },
+        // A more robust regex to handle slugs like 'ac-service-repair'
+        categoryName: { $regex: new RegExp(`^${categorySlug.replace(/-/g, " ")}$`, "i") },
         isActive: true,
       })
 
@@ -30,46 +28,37 @@ export async function GET(req: NextRequest) {
         services = await getServicesByCategory(category._id.toString(), location || undefined)
       }
     } else {
-      // Default case if no parameters are provided
-      const allCategories = await ServiceCategory.find({ isActive: true })
-      const allServices = []
-
-      for (const category of allCategories) {
-        const categoryServices = await getServicesByCategory(category._id.toString(), location || undefined)
-        allServices.push(...categoryServices)
-      }
-      services = allServices
+      // Fallback: If no specific query, we can decide to return nothing or popular services.
+      // For now, returning an empty array is safer than returning everything.
+      services = []
     }
 
-    console.log("Raw services from DB:", services)
-    // Transform to match frontend interface
-    const transformedServices = services.map((service: any) => ({
+    // Transform the raw service data to match the frontend 'Service' interface
+    const transformedServices = services.map((service) => ({
       id: service._id.toString(),
-      slug: service.serviceName.toLowerCase().replace(/\s+/g, "-"),
-      categorySlug: categorySlug || "general",
+      slug: service.slug || service.serviceName.toLowerCase().replace(/\s+/g, "-"),
+      categorySlug: service.category?.categoryName?.toLowerCase().replace(/\s+/g, "-") || "general",
       title: service.serviceName,
       city: location || "Available",
-      rating: 4.5, // You can calculate this from reviews
-      ratingCount: 150, // You can calculate this from reviews
+      rating: 4.5, // Placeholder: Replace with actual calculated rating
+      ratingCount: 150, // Placeholder: Replace with actual review count
       images: [
-        service.imageUrl || // Corrected from iconUrl to imageUrl
-          `/placeholder.svg?height=200&width=300&query=${encodeURIComponent(service.serviceName + " service")}`,
+        service.imageUrl ||
+          `/placeholder.svg?height=200&width=300&query=${encodeURIComponent(service.serviceName)}`,
       ],
       options: [
         {
           id: service._id.toString(),
           title: service.serviceName,
-          priceSubunits: service.basePrice * 100, // Convert to subunits (paise)
+          priceSubunits: (service.basePrice || 0) * 100,
         },
       ],
       summary: service.description,
     }))
-    
-    console.log("Transformed Services: ",transformedServices);
 
     return NextResponse.json(transformedServices)
   } catch (error) {
-    console.error("Services fetch error:", error)
+    console.error("Services API Error:", error)
     return NextResponse.json({ message: "Failed to fetch services" }, { status: 500 })
   }
 }

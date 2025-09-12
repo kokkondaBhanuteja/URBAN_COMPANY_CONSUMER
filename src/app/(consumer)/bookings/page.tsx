@@ -10,7 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Terminal } from "lucide-react"
 
 const fetchBookings = async () => {
-  const response = await fetch("/api/consumer/bookings", {
+  // ✨ MODIFIED: Added '?limit=100' to fetch up to 100 bookings.
+  const response = await fetch("/api/consumer/bookings?limit=100", {
     credentials: "include",
   });
   if (!response.ok) {

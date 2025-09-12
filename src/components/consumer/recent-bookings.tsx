@@ -8,13 +8,12 @@ import { Calendar, MapPin, Clock } from "lucide-react"
 import Link from "next/link"
 import { BookingDetailsModal } from "./booking-details-modal"
 
-// ... (interfaces and helper functions remain the same)
 interface Booking {
   _id: string;
   serviceId: {
     serviceName: string;
   };
-  bookingStatus: string;
+  bookingStatus: "requested" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled_by_user" | "cancelled_by_provider";
   scheduledAt: string;
   pricing: {
     finalAmount: number;
@@ -29,9 +28,8 @@ interface RecentBookingsProps {
   bookings: Booking[];
 }
 
-
 export function RecentBookings({ bookings }: RecentBookingsProps) {
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBookingClick = (booking: Booking) => {
@@ -47,16 +45,18 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "bg-primary text-primary-foreground";
+      case "assigned":
+      case "in_progress":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "completed":
-        return "bg-accent text-accent-foreground";
+        return "bg-green-100 text-green-800 border-green-200";
       case "requested":
-        return "bg-secondary text-secondary-foreground";
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "cancelled_by_user":
       case "cancelled_by_provider":
-        return "bg-destructive text-destructive-foreground";
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
@@ -72,6 +72,7 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
     return new Date(dateString).toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true
     });
   };
 
@@ -87,13 +88,13 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Recent Bookings</CardTitle>
+          <CardTitle className="text-lg font-semibold">All Bookings</CardTitle>
         </CardHeader>
         <CardContent>
           {bookings.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">No bookings yet</p>
+              <p className="text-muted-foreground mb-4">You haven't booked any services yet.</p>
               <p className="text-sm text-muted-foreground text-pretty">
                 Your service bookings will appear here once you make your first booking.
               </p>
@@ -115,12 +116,12 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-balance">{booking.serviceId.serviceName}</h4>
-                        <Badge className={getStatusColor(booking.bookingStatus)}>
-                          {booking.bookingStatus.replace("_", " ")}
+                        <Badge variant="outline" className={getStatusColor(booking.bookingStatus)}>
+                          {booking.bookingStatus.replace(/_/g, " ")}
                         </Badge>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(booking.scheduledAt)}</div>
                         <div className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatTime(booking.scheduledAt)}</div>
                         <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{booking.serviceAddress.city}</div>
@@ -129,10 +130,10 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                     </div>
                   </div>
                   
-                  {/* ✨ ADD THIS BLOCK ✨ */}
+                  {/* ✨ ADDED THIS BLOCK ✨ */}
                   {booking.bookingStatus === 'completed' && (
                     <div className="mt-4 pt-4 border-t flex justify-end">
-                      <Button asChild size="sm">
+                      <Button asChild size="sm" variant="outline">
                         <Link href={`/review/${booking._id}`}>Leave a Review</Link>
                       </Button>
                     </div>

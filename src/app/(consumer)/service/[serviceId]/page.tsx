@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation" // Import useRouter
 import Image from "next/image"
 import { Star, MapPin } from "lucide-react"
 import { NavigationHeader } from "@/components/layout/navigation-header"
@@ -9,7 +9,8 @@ import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCart } from "@/lib/cart-context"
-import type { Service } from "@/lib/content" // Keep the service type
+import { toast } from "sonner" // Import the toast function
+import type { Service } from "@/lib/content"
 
 // New function to fetch a single service by its ID
 const fetchServiceById = async (id: string): Promise<Service | null> => {
@@ -53,6 +54,7 @@ const fetchServiceById = async (id: string): Promise<Service | null> => {
 
 export default function ServicePage() {
   const params = useParams()
+  const router = useRouter() // Get the router instance
   const serviceId = params.serviceId as string
   const { addItem } = useCart()
 
@@ -87,6 +89,16 @@ export default function ServicePage() {
       currency: "INR",
       image: service.images[0],
     })
+
+    // ✨ ADD THIS BLOCK TO SHOW THE POPUP ✨
+    toast.success(`${service.title} added to cart!`, {
+      description: "You can view your cart or continue browsing.",
+      action: {
+        label: "View Cart",
+        onClick: () => router.push('/cart'),
+      },
+    });
+    // ✨ END OF BLOCK ✨
   }
 
   if (loading) {

@@ -11,6 +11,7 @@ import { Terminal, Search as SearchIcon } from "lucide-react"
 import type { Service } from "@/lib/content"
 import { Suspense } from "react"
 
+// This function now correctly expects a direct array of Service objects
 const fetchSearchResults = async (query: string, location: string): Promise<Service[]> => {
   if (!query) return []
   const params = new URLSearchParams({ q: query, location })
@@ -18,7 +19,7 @@ const fetchSearchResults = async (query: string, location: string): Promise<Serv
   if (!response.ok) {
     throw new Error("Network response was not ok")
   }
-  return response.json()
+  return response.json() // This will be the direct array: Service[]
 }
 
 function SearchResults() {
@@ -33,7 +34,7 @@ function SearchResults() {
   } = useQuery<Service[]>({
     queryKey: ["searchResults", query, location],
     queryFn: () => fetchSearchResults(query, location),
-    enabled: !!query,
+    enabled: !!query, // Only run the query if 'q' exists
   })
 
   return (
@@ -72,9 +73,10 @@ function SearchResults() {
   )
 }
 
+// Wrap with Suspense for better loading behavior with useSearchParams
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading search results...</div>}>
       <SearchResults />
     </Suspense>
   )
