@@ -46,10 +46,19 @@ export default function CartPage() {
     setShowBookingForm(true)
   }
 
+  // ==================================================================
+  // CORRECTED: handleBookingSubmit
+  // ==================================================================
   const handleBookingSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      const firstItem = items[0]
+      // 1. Map the cart items to the format the API expects.
+      const servicesPayload = items.map(item => ({
+        serviceId: item.serviceId,
+        totalPrice: (item.unitPriceSubunits * item.qty) / 100,
+      }));
+
+      // 2. Send the correctly structured payload with a 'services' array.
       const response = await fetch("/api/consumer/bookings", {
         method: "POST",
         headers: {
@@ -57,20 +66,27 @@ export default function CartPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          serviceId: firstItem.serviceId,
+          services: servicesPayload,
           serviceAddress: formData.serviceAddress,
           scheduledAt: formData.scheduledAt,
-          totalPrice: totalAmountSubunits / 100,
           specialInstructions: formData.specialInstructions,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create booking")
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to create booking")
       }
 
       const result = await response.json()
-      setBookingData({ ...formData, bookingId: result.bookingId })
+
+      // 3. CORRECTLY store the orderId and bookingIds array from the API response.
+      setBookingData({
+        ...formData,
+        orderId: result.orderId,
+        bookingIds: result.bookingIds,
+      })
+
       setShowCheckout(true)
       setShowBookingForm(false)
     } catch (error: any) {
@@ -82,65 +98,77 @@ export default function CartPage() {
     }
   }
 
+  // ==================================================================
+  // CORRECTED: handlePaymentSuccess
+  // ==================================================================
   const handlePaymentSuccess = async (result: PaymentResult) => {
-    if (result.success && result.paymentId) {
-      try {
-        setLoading(true);
+    if (!result.success || !result.paymentId || !bookingData?.orderId) {
+      toast.error("Payment processing failed", {
+        description: "Could not get required payment or booking details. Please contact support.",
+      })
+      return
+    }
 
-        // Fetch payment details from your new API route
-        const paymentDetailsResponse = await fetch(`/api/razorpay/${result.paymentId}`);
-        const paymentDetails = await paymentDetailsResponse.json();
-        
-        // 1. Save payment details to the database with the fetched method
-        await fetch("/api/consumer/payments", {
+    try {
+      setLoading(true)
+
+      const paymentDetailsResponse = await fetch(`/api/razorpay/${result.paymentId}`)
+      const paymentDetails = await paymentDetailsResponse.json()
+
+      // 1. Save payment details with the correct orderId and bookingIds
+      await fetch("/api/consumer/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          orderId: bookingData.orderId, // <-- FIX: Send the correct orderId
+          bookingIds: bookingData.bookingIds, // <-- FIX: Send the array of booking IDs
+          amount: totalAmountSubunits / 100,
+          paymentMethod: paymentDetails.method || 'online',
+          paymentStatus: "successful",
+          transactionId: result.paymentId,
+        }),
+      })
+
+      // 2. Loop through each booking to trigger provider assignment and payouts
+      for (const bookingId of bookingData.bookingIds) {
+        // Assign a provider for EACH booking
+        await fetch(`/api/consumer/bookings/${bookingId}/assign-provider`, {
+          method: "POST",
+          credentials: "include",
+        })
+
+        // Create a payout for EACH booking
+        await fetch("/api/payouts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({
-            bookingId: bookingData.bookingId,
-            amount: totalAmountSubunits / 100,
-            paymentMethod: paymentDetails.method || 'online', // Use fetched method
-            paymentStatus: "successful",
-            transactionId: result.paymentId,
-          }),
-        });
-
-        // 2. Trigger provider assignment
-        await fetch(`/api/consumer/bookings/${bookingData.bookingId}/assign-provider`, {
-            method: "POST",
-            credentials: "include",
-        });
-
-        // 3. Create provider payout
-        await fetch("/api/payouts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ bookingId: bookingData.bookingId }),
-          });
-
-        toast.success("Payment successful!", {
-          description: "We are now assigning a top-rated professional for your service.",
-        });
-
-      } catch (error) {
-        console.error("Failed to save payment details:", error);
-        toast.error("Payment Recording Failed", {
-          description: "Your payment was successful but we had trouble recording it. Please contact support.",
+          body: JSON.stringify({ bookingId: bookingId }), // Send the individual bookingId
         })
-      } finally {
-        setLoading(false);
       }
+
+      toast.success("Payment successful!", {
+        description: "We are now assigning a top-rated professional for your service.",
+      })
+    } catch (error) {
+      console.error("Post-payment processing failed:", error)
+      toast.error("Payment Recording Failed", {
+        description: "Your payment was successful but we had trouble recording it. Please contact support.",
+      })
+    } finally {
+      setLoading(false)
+      // Clean up the state and redirect the user
+      handleCheckoutClose()
     }
-  };
+  }
 
   const handleCheckoutClose = () => {
-    clearCart();
-    setShowCheckout(false);
-    setShowBookingForm(false);
-    setBookingData(null);
-    router.push('/bookings');
-  };
+    clearCart()
+    setShowCheckout(false)
+    setShowBookingForm(false)
+    setBookingData(null)
+    router.push('/bookings')
+  }
 
   const paymentItems = items.map((item) => ({
     title: `${item.title} - ${item.optionTitle}`,

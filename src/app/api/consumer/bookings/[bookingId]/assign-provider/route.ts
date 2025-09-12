@@ -11,7 +11,19 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       return middlewareResponse;
     }
 
-    const { excludedProviderIds } = await req.json();
+    let excludedProviderIds: string[] = [];
+    
+    // CORRECTED: Safely parse the JSON body
+    // This try-catch block prevents an error if the request has no body.
+    try {
+      const body = await req.json();
+      // If the body exists and has our property, use it. Otherwise, default to an empty array.
+      excludedProviderIds = body.excludedProviderIds || [];
+    } catch (error) {
+      // This error is expected if the body is empty. We can safely ignore it
+      // and proceed with the default empty excludedProviderIds array.
+    }
+
     const bookingId = params.bookingId;
     const updatedBooking = await assignProviderToBooking(bookingId, excludedProviderIds);
 

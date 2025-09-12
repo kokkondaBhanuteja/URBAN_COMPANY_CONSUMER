@@ -1,4 +1,3 @@
-// src/app/api/consumer/payments/route.ts
 import { type NextRequest, NextResponse } from "next/server";
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
@@ -20,7 +19,8 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      orderId, // Use orderId
+      orderId,
+      bookingIds,
       amount,
       paymentMethod,
       paymentStatus,
@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     const newPayment = new Payment({
-      orderId, // Use orderId
+      orderId,
+      bookingIds,
       userId: new Types.ObjectId(userId),
       amount,
       paymentMethod,
@@ -38,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     await newPayment.save();
 
-    // Update all bookings associated with this order to 'confirmed'
     await Booking.updateMany({ orderId }, {
       $set: { bookingStatus: "confirmed" },
     });
