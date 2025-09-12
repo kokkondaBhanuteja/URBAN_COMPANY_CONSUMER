@@ -11,10 +11,14 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       return middlewareResponse;
     }
 
+    const { excludedProviderIds } = await req.json();
     const bookingId = params.bookingId;
-    await assignProviderToBooking(bookingId);
+    const updatedBooking = await assignProviderToBooking(bookingId, excludedProviderIds);
 
-    return NextResponse.json({ message: "Provider assigned successfully" });
+    return NextResponse.json({ 
+        message: "Provider assignment process completed.",
+        providerId: updatedBooking?.providerId // Return the assigned provider's ID
+    });
   } catch (error: any) {
     console.error("Provider assignment error:", error);
     return NextResponse.json(

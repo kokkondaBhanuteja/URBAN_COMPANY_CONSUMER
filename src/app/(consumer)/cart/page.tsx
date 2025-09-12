@@ -49,7 +49,12 @@ export default function CartPage() {
   const handleBookingSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      const firstItem = items[0]
+      // Prepare an array of all services in the cart
+      const servicesToBook = items.map(item => ({
+        serviceId: item.serviceId,
+        totalPrice: (item.unitPriceSubunits * item.qty) / 100,
+      }));
+
       const response = await fetch("/api/consumer/bookings", {
         method: "POST",
         headers: {
@@ -57,20 +62,21 @@ export default function CartPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          serviceId: firstItem.serviceId,
+          services: servicesToBook, // Send the array of services
           serviceAddress: formData.serviceAddress,
           scheduledAt: formData.scheduledAt,
-          totalPrice: totalAmountSubunits / 100,
           specialInstructions: formData.specialInstructions,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create booking")
+        const errorResult = await response.json();
+        throw new Error(errorResult.message || "Failed to create bookings");
       }
 
       const result = await response.json()
-      setBookingData({ ...formData, bookingId: result.bookingId })
+      // The result now contains orderId and an array of bookingIds
+      setBookingData({ ...formData, orderId: result.orderId, bookingIds: result.bookingIds })
       setShowCheckout(true)
       setShowBookingForm(false)
     } catch (error: any) {
@@ -82,19 +88,17 @@ export default function CartPage() {
     }
   }
 
-  // MODIFIED: This function now only handles the backend API calls.
-  // It no longer touches the UI state.
   const handlePaymentSuccess = async (result: PaymentResult) => {
     if (result.success && result.paymentId) {
       try {
-        setLoading(true); // You can use this to show a spinner on the success modal
-        // 1. Save payment details to the database
+        setLoading(true);
+        // 1. Save payment details to the database against the orderId
         await fetch("/api/consumer/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            bookingId: bookingData.bookingId,
+            orderId: bookingData.orderId,
             amount: totalAmountSubunits / 100,
             paymentMethod: "credit_card",
             paymentStatus: "successful",
@@ -102,25 +106,37 @@ export default function CartPage() {
           }),
         });
 
-        // 2. Trigger provider assignment
-        await fetch(`/api/consumer/bookings/${bookingData.bookingId}/assign-provider`, {
-            method: "POST",
-            credentials: "include",
-        });
-        // 3. Create provider payout by calling the new API route
-        await fetch("/api/payouts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ bookingId: bookingData.bookingId }),
-          });
-
         toast.success("Payment successful!", {
-          description: "We are now assigning a top-rated professional for your service.",
+          description: "We are now assigning top-rated professionals for your services.",
         });
+
+        // 2. Trigger provider assignment for each booking, trying for different providers
+        let assignedProviderIds: string[] = [];
+        for (const bookingId of bookingData.bookingIds) {
+          const assignmentResponse = await fetch(`/api/consumer/bookings/${bookingId}/assign-provider`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ excludedProviderIds: assignedProviderIds }),
+          });
+          const assignmentResult = await assignmentResponse.json();
+          if (assignmentResult.providerId) {
+            assignedProviderIds.push(assignmentResult.providerId);
+          }
+        }
+
+        // 3. Create provider payouts for each booking
+        for (const bookingId of bookingData.bookingIds) {
+          await fetch("/api/payouts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ bookingId }),
+            });
+        }
 
       } catch (error) {
-        console.error("Failed to save payment details:", error);
+        console.error("Post-payment processing failed:", error);
         toast.error("Payment Recording Failed", {
           description: "Your payment was successful but we had trouble recording it. Please contact support.",
         })
@@ -130,14 +146,12 @@ export default function CartPage() {
     }
   };
 
-  // NEW: This function handles clearing the cart and redirecting the user
-  // after they have seen the success modal and clicked "Continue Shopping".
   const handleCheckoutClose = () => {
     clearCart();
     setShowCheckout(false);
     setShowBookingForm(false);
     setBookingData(null);
-    router.push('/bookings'); // Redirect to a relevant page like My Bookings
+    router.push('/bookings'); 
   };
 
   const paymentItems = items.map((item) => ({
@@ -146,8 +160,6 @@ export default function CartPage() {
     unitPrice: item.unitPriceSubunits,
   }))
 
-  // The rest of your JSX remains largely the same, but we update the
-  // `PaymentSheet` props.
   if (showCheckout) {
     return (
       <div className="min-h-screen bg-background">
@@ -159,7 +171,7 @@ export default function CartPage() {
               currency="INR"
               items={paymentItems}
               onSuccess={handlePaymentSuccess}
-              onCancel={handleCheckoutClose} // UPDATED: Use the new handler here
+              onCancel={handleCheckoutClose}
               prefill={{
                 name: user?.fullName,
                 email: user?.email,
@@ -172,7 +184,7 @@ export default function CartPage() {
     )
   }
 
-  // No changes needed for the rest of the file...
+  // ... (Rest of the JSX remains the same)
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-background">

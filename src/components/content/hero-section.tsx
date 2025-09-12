@@ -38,12 +38,20 @@ export function HeroSection({ categories, isLoading }: HeroSectionProps) {
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : categories && categories.length > 0 ? (
                 // The grid of category cards, displayed when data is ready
                 <div className="grid grid-cols-4 gap-y-6 gap-x-4">
                   {categories?.slice(0, 8).map((category) => ( // Show up to 8 categories
                     <CategoryCard key={category.id} category={category} />
                   ))}
+                </div>
+              ) : (
+                // Empty state when no categories are found
+                <div className="text-center py-8">
+                  <img src="/no_data.svg" alt="No services available" width={250} className="mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No services available for the selected location.
+                  </p>
                 </div>
               )}
             </div>
