@@ -3,12 +3,12 @@ import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
 import Booking from "@/database/bookingModel"
 import { connectDb } from "@/lib/dbConnect"
 import { Types } from "mongoose"
+import { nanoid } from "nanoid" // <-- The missing import
 
 export async function GET(req: NextRequest) {
   await connectDb()
 
   try {
-    // Correctly handle the middleware response, just like in your profile route
     const middlewareResponse = await consumerMiddleware(req)
     if (middlewareResponse instanceof NextResponse) {
       return middlewareResponse;
@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "10")
 
-    // FIX: Use the correct field name 'userId' from your bookingModel
     const query: any = { userId: new Types.ObjectId(userId) }
     if (status) {
       query.bookingStatus = status
@@ -36,7 +35,7 @@ export async function GET(req: NextRequest) {
         path: 'providerId',
         populate: {
            path: 'userId',
-           select: 'userName' 
+           select: 'userName'
         }
       })
       .sort({ createdAt: -1 })
@@ -64,7 +63,6 @@ export async function POST(req: NextRequest) {
   await connectDb()
 
   try {
-    // Correctly handle the middleware response
     const middlewareResponse = await consumerMiddleware(req)
      if (middlewareResponse instanceof NextResponse) {
       return middlewareResponse;
@@ -75,28 +73,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "User ID not found in headers" }, { status: 401 })
     }
 
-    const bookingData = await req.json()
+    const { services, serviceAddress, scheduledAt, specialInstructions } = await req.json();
 
-    // FIX: Use the correct field name 'userId' from your bookingModel
-    const booking = new Booking({
-      userId: new Types.ObjectId(userId),
-      serviceId: new Types.ObjectId(bookingData.serviceId),
-      serviceAddress: bookingData.serviceAddress,
-      scheduledAt: new Date(bookingData.scheduledAt),
-      // Assuming 'pricing' is part of your model based on bookingModel.ts
-      pricing: {
-        basePrice: bookingData.totalPrice, // Or calculate as needed
-        finalAmount: bookingData.totalPrice,
-      },
-      specialInstructions: bookingData.specialInstructions,
-    })
+    if (!Array.isArray(services) || services.length === 0) {
+      return NextResponse.json({ message: "An array of services is required." }, { status: 400 });
+    }
 
-    await booking.save()
+    const orderId = nanoid(); // Generate a single orderId for this transaction
+    const createdBookings = [];
+
+    for (const service of services) {
+      const booking = new Booking({
+        orderId,
+        userId: new Types.ObjectId(userId),
+        serviceId: new Types.ObjectId(service.serviceId),
+        serviceAddress,
+        scheduledAt: new Date(scheduledAt),
+        pricing: {
+          basePrice: service.totalPrice,
+          finalAmount: service.totalPrice,
+        },
+        specialInstructions,
+      });
+      const savedBooking = await booking.save();
+      createdBookings.push(savedBooking);
+    }
 
     return NextResponse.json(
       {
-        message: "Booking created successfully",
-        bookingId: booking._id,
+        message: "Bookings created successfully",
+        orderId,
+        bookingIds: createdBookings.map(b => b._id),
       },
       { status: 201 },
     )

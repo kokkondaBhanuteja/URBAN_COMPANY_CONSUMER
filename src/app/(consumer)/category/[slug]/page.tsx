@@ -89,7 +89,8 @@ export default function CategoryPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-600">No services available in this category yet.</p>
+              <img src="/no_data.svg" alt="No services available" width={400} className="mx-auto mb-6" />
+              <p className="text-lg text-gray-600">No services available for the selected location.</p>
             </div>
           )}
         </div>

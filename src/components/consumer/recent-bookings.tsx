@@ -15,6 +15,7 @@ interface Booking {
   };
   bookingStatus: "requested" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled_by_user" | "cancelled_by_provider";
   scheduledAt: string;
+  createdAt: string; // Ensure createdAt is part of the interface
   pricing: {
     finalAmount: number;
   };
@@ -26,9 +27,10 @@ interface Booking {
 
 interface RecentBookingsProps {
   bookings: Booking[];
+  onBookingUpdate: () => void;
 }
 
-export function RecentBookings({ bookings }: RecentBookingsProps) {
+export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProps) {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -130,7 +132,6 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                     </div>
                   </div>
                   
-                  {/* ✨ ADDED THIS BLOCK ✨ */}
                   {booking.bookingStatus === 'completed' && (
                     <div className="mt-4 pt-4 border-t flex justify-end">
                       <Button asChild size="sm" variant="outline">
@@ -138,8 +139,6 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                       </Button>
                     </div>
                   )}
-                  {/* ✨ END OF BLOCK ✨ */}
-
                 </div>
               ))}
             </div>
@@ -150,7 +149,9 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
         booking={selectedBooking}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onBookingUpdate={onBookingUpdate}
       />
     </>
   );
 }
+

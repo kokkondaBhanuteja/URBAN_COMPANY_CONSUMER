@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { NavigationHeader } from "@/components/layout/navigation-header"
 import { Footer } from "@/components/layout/footer"
 import { AuthGuard } from "@/components/consumer/auth-guard"
@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Terminal } from "lucide-react"
 
 const fetchBookings = async () => {
-  // ✨ MODIFIED: Added '?limit=100' to fetch up to 100 bookings.
   const response = await fetch("/api/consumer/bookings?limit=100", {
     credentials: "include",
   });
@@ -22,10 +21,16 @@ const fetchBookings = async () => {
 };
 
 export default function BookingsPage() {
+  const queryClient = useQueryClient();
   const { data: bookings, isLoading, error } = useQuery({
     queryKey: ['allBookings'],
     queryFn: fetchBookings,
   });
+
+  const handleBookingUpdate = () => {
+    // This function will be called after a successful cancellation to refetch the data
+    queryClient.invalidateQueries({ queryKey: ['allBookings'] });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +55,7 @@ export default function BookingsPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {bookings && <RecentBookings bookings={bookings} />}
+            {bookings && <RecentBookings bookings={bookings} onBookingUpdate={handleBookingUpdate} />}
           </AuthGuard>
         </div>
       </main>
@@ -58,3 +63,4 @@ export default function BookingsPage() {
     </div>
   )
 }
+

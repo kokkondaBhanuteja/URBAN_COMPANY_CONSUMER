@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
+import { getStorageItem, setStorageItem } from "./storage";
 
 interface Location {
   city: string;
@@ -12,6 +13,7 @@ interface LocationContextType {
   location: Location | null;
   setLocation: (location: Location) => void;
   loading: boolean;
+  detectLocation: () => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(
@@ -19,33 +21,34 @@ const LocationContext = createContext<LocationContextType | undefined>(
 );
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
-  const [location, setLocation] = useState<Location | null>(null);
+  const [location, setLocationState] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // 1. Define the IP-based fallback function
-    const fetchIpBasedLocation = async () => {
-      try {
-        const response = await fetch("/api/location");
-        const data = await response.json();
-        console.log("Using fallback IP-based location:", data);
-        setLocation(data);
-      } catch (error) {
-        console.error("Failed to fetch IP-based location:", error);
-        // Final fallback to a default location
-        setLocation({ city: "Hanamkonda", region: "Telangana" });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const setLocation = (newLocation: Location) => {
+    setLocationState(newLocation);
+    setStorageItem("user-location", newLocation);
+  }
 
-    // 2. Try to use the browser's highly accurate Geolocation API first
+  const fetchIpBasedLocation = async () => {
+    try {
+      const response = await fetch("/api/location");
+      const data = await response.json();
+      setLocation(data);
+    } catch (error) {
+      console.error("Failed to fetch IP-based location:", error);
+      setLocation({ city: "Hanamkonda", region: "Telangana" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const detectLocation = () => {
+    setLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
-            // Use a reverse geocoding service to get address from coordinates
             const response = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
             );
@@ -53,7 +56,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             const city = data.address.city || data.address.town || data.address.village;
             const region = data.address.state;
 
-            console.log("Detected location via Geolocation API:", { city, region });
             setLocation({ city, region });
             setLoading(false);
           } catch (error) {
@@ -62,20 +64,28 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           }
         },
         (error) => {
-          // This block runs if the user denies permission
           console.warn(`Geolocation error (${error.code}): ${error.message}. Using fallback.`);
           fetchIpBasedLocation();
         }
       );
     } else {
-      // This block runs if the browser doesn't support Geolocation
       console.log("Browser does not support geolocation. Using fallback.");
       fetchIpBasedLocation();
+    }
+  }
+
+  useEffect(() => {
+    const savedLocation = getStorageItem<Location | null>("user-location", null);
+    if (savedLocation) {
+      setLocationState(savedLocation);
+      setLoading(false);
+    } else {
+      detectLocation();
     }
   }, []);
 
   return (
-    <LocationContext.Provider value={{ location, setLocation, loading }}>
+    <LocationContext.Provider value={{ location, setLocation, loading, detectLocation }}>
       {children}
     </LocationContext.Provider>
   );

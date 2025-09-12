@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      bookingId,
+      orderId, // Use orderId
       amount,
       paymentMethod,
       paymentStatus,
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     const newPayment = new Payment({
-      bookingId: new Types.ObjectId(bookingId),
+      orderId, // Use orderId
       userId: new Types.ObjectId(userId),
       amount,
       paymentMethod,
@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
 
     await newPayment.save();
 
-    // Optionally, you can update the booking status to 'confirmed'
-    await Booking.findByIdAndUpdate(bookingId, {
-      bookingStatus: "confirmed",
+    // Update all bookings associated with this order to 'confirmed'
+    await Booking.updateMany({ orderId }, {
+      $set: { bookingStatus: "confirmed" },
     });
 
     return NextResponse.json(newPayment, { status: 201 });

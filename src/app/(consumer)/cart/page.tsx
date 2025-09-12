@@ -49,7 +49,12 @@ export default function CartPage() {
   const handleBookingSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      const firstItem = items[0]
+      // Prepare an array of all services in the cart
+      const servicesToBook = items.map(item => ({
+        serviceId: item.serviceId,
+        totalPrice: (item.unitPriceSubunits * item.qty) / 100,
+      }));
+
       const response = await fetch("/api/consumer/bookings", {
         method: "POST",
         headers: {
@@ -57,20 +62,21 @@ export default function CartPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          serviceId: firstItem.serviceId,
+          services: servicesToBook, // Send the array of services
           serviceAddress: formData.serviceAddress,
           scheduledAt: formData.scheduledAt,
-          totalPrice: totalAmountSubunits / 100,
           specialInstructions: formData.specialInstructions,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create booking")
+        const errorResult = await response.json();
+        throw new Error(errorResult.message || "Failed to create bookings");
       }
 
       const result = await response.json()
-      setBookingData({ ...formData, bookingId: result.bookingId })
+      // The result now contains orderId and an array of bookingIds
+      setBookingData({ ...formData, orderId: result.orderId, bookingIds: result.bookingIds })
       setShowCheckout(true)
       setShowBookingForm(false)
     } catch (error: any) {
@@ -85,19 +91,14 @@ export default function CartPage() {
   const handlePaymentSuccess = async (result: PaymentResult) => {
     if (result.success && result.paymentId) {
       try {
-        setLoading(true);
-
-        // Fetch payment details from your new API route
-        const paymentDetailsResponse = await fetch(`/api/razorpay/${result.paymentId}`);
-        const paymentDetails = await paymentDetailsResponse.json();
-        
-        // 1. Save payment details to the database with the fetched method
+        setLoading(true); // You can use this to show a spinner on the success modal
+        // 1. Save payment details to the database
         await fetch("/api/consumer/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            bookingId: bookingData.bookingId,
+            orderId: bookingData.orderId,
             amount: totalAmountSubunits / 100,
             paymentMethod: paymentDetails.method || 'online', // Use fetched method
             paymentStatus: "successful",
@@ -110,8 +111,7 @@ export default function CartPage() {
             method: "POST",
             credentials: "include",
         });
-
-        // 3. Create provider payout
+        // 3. Create provider payout by calling the new API route
         await fetch("/api/payouts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -124,7 +124,7 @@ export default function CartPage() {
         });
 
       } catch (error) {
-        console.error("Failed to save payment details:", error);
+        console.error("Post-payment processing failed:", error);
         toast.error("Payment Recording Failed", {
           description: "Your payment was successful but we had trouble recording it. Please contact support.",
         })
@@ -139,7 +139,7 @@ export default function CartPage() {
     setShowCheckout(false);
     setShowBookingForm(false);
     setBookingData(null);
-    router.push('/bookings');
+    router.push('/bookings'); // Redirect to a relevant page like My Bookings
   };
 
   const paymentItems = items.map((item) => ({
@@ -172,6 +172,7 @@ export default function CartPage() {
     )
   }
 
+  // No changes needed for the rest of the file...
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-background">
