@@ -63,30 +63,49 @@ export async function assignProviderToBooking(bookingId: string, excludedProvide
         throw new Error("Booking not found.");
     }
 
-    if (booking.providerId || (booking.bookingStatus !== 'requested' && booking.bookingStatus !== 'confirmed')) {        
+    if (booking.providerId || (booking.bookingStatus !== 'requested' && booking.bookingStatus !== 'confirmed')) {
         console.warn(`Booking ${bookingId} is not in a 'requested' or 'confirmed' state. Current state: ${booking.bookingStatus}`);
         return;
     }
 
-    const availableProviders = await findAvailableProviders(booking, excludedProviderIds);
+    // Check if a provider is already assigned to another booking in the same order
+    const existingBookingInOrder = await Booking.findOne({
+        orderId: booking.orderId,
+        providerId: { $exists: true, $ne: null }
+    });
 
-    if (availableProviders.length === 0) {
-        console.warn(`No new available providers found for booking: ${bookingId}`);
-        return;
+    let bestProvider;
+
+    if (existingBookingInOrder && existingBookingInOrder.providerId) {
+        const existingProvider = await Provider.findById(existingBookingInOrder.providerId);
+        if (existingProvider && existingProvider.servicesOffered.includes(booking.serviceId)) {
+            bestProvider = existingProvider;
+        }
     }
 
-    const rankedProviders = await rankProviders(availableProviders);
-    const bestProvider = rankedProviders[0];
+    if (!bestProvider) {
+        const availableProviders = await findAvailableProviders(booking, excludedProviderIds);
+        if (availableProviders.length === 0) {
+            console.warn(`No new available providers found for booking: ${bookingId}`);
+            return;
+        }
+        const rankedProviders = await rankProviders(availableProviders);
+        bestProvider = rankedProviders[0];
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     booking.providerId = bestProvider._id;
     booking.bookingStatus = 'assigned';
+    booking.bookingOtp = otp; // Save OTP to booking
     await booking.save();
 
     console.log(`Successfully assigned provider ${bestProvider._id} to booking ${bookingId}`);
 
     const user = await User.findById(booking.userId);
-    if(user) {
-      await sendBookingConfirmationEmail(user, booking);
+    if (user) {
+        await sendBookingConfirmationEmail(user, booking); // Pass the whole booking object
     }
 
     return booking;

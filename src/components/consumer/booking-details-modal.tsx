@@ -124,6 +124,12 @@ export function BookingDetailsModal({ booking, isOpen, onClose, onBookingUpdate 
             <span className="text-muted-foreground">Payment Method</span>
             <span>Credit Card</span>
           </div>
+          {booking.bookingOtp && (
+            <div className="flex justify-between items-center p-3 bg-secondary rounded-md">
+              <span className="text-muted-foreground">Service OTP</span>
+              <span className="font-bold text-lg tracking-wider">{booking.bookingOtp}</span>
+            </div>
+          )}
         </div>
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between w-full">
             {isCancellable ? (
@@ -156,4 +162,3 @@ export function BookingDetailsModal({ booking, isOpen, onClose, onBookingUpdate 
     </Dialog>
   );
 }
-

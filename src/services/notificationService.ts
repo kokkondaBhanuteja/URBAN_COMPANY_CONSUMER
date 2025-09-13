@@ -27,7 +27,9 @@ export const sendBookingConfirmationEmail = async (user: IUser, booking: IBookin
           <p><strong>Date:</strong> ${new Date(booking.scheduledAt).toLocaleDateString()}</p>
           <p><strong>Time:</strong> ${new Date(booking.scheduledAt).toLocaleTimeString()}</p>
           <p><strong>Address:</strong> ${booking.serviceAddress.addressLine1}, ${booking.serviceAddress.city}, ${booking.serviceAddress.state} - ${booking.serviceAddress.pincode}</p>
+          <p><strong>Your OTP:</strong> <strong style="font-size: 1.2em;">${booking.bookingOtp}</strong></p>
         </div>
+        <p>Please share this OTP with your provider to start the service.</p>
         <p>We look forward to serving you!</p>
       </div>
     `,
