@@ -144,7 +144,6 @@ export async function verifyOTP(email: string, otp: string) {
     throw error
   }
 }
-
 export async function loginWithGoogle(
   googleId: string,
   userData: {
@@ -152,7 +151,6 @@ export async function loginWithGoogle(
     email: string
   },
 ) {
-  // ... existing code ...
   try {
     // Check if user exists with Google ID
     let user = await User.findOne({ googleId })
@@ -165,6 +163,22 @@ export async function loginWithGoogle(
         // Link Google account to existing user
         user.googleId = googleId
         await user.save()
+
+        // Check if a consumer profile and wallet exist, if not, create them.
+        let consumer = await Consumer.findOne({ userId: user._id });
+        if (!consumer) {
+            let wallet = await Wallet.findOne({ userId: user._id });
+            if (!wallet) {
+                wallet = new Wallet({ userId: user._id, balance: 0 });
+                await wallet.save();
+            }
+            consumer = new Consumer({
+                userId: user._id,
+                walletId: wallet._id,
+            });
+            await consumer.save();
+        }
+
       } else {
         // Create new user
         user = new User({
@@ -172,21 +186,21 @@ export async function loginWithGoogle(
           email: userData.email.toLowerCase(),
           googleId,
           userType: "consumer",
-          // No password needed for Google OAuth users
+          isVerified: true,
         })
         await user.save()
 
-        // Create a wallet for the new user
+        // Create wallet for the new user
         const newWallet = new Wallet({
-            userId: user._id,
-            balance: 0,
+          userId: user._id,
+          balance: 0,
         });
         await newWallet.save();
 
         // Create consumer profile
         const newConsumer = new Consumer({
           userId: user._id,
-          walletId: newWallet._id, // Assign the new wallet's ID
+          walletId: newWallet._id,
         })
         await newConsumer.save()
       }

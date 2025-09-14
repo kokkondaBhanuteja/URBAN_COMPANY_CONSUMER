@@ -2,7 +2,7 @@ import passport from "passport"
 import { Strategy as GoogleStrategy } from "passport-google-oauth20"
 import User from "@/database/userModel"
 import Consumer from "@/database/consumerModel"
-import Wallet from "@/database/walletModel" // Import the Wallet model
+import Wallet from "@/database/walletModel" // Import Wallet model
 import { connectDb } from "@/lib/dbConnect"
 
 passport.use(
@@ -28,6 +28,22 @@ passport.use(
           user.googleId = profile.id
           user.isVerified = true
           await user.save()
+
+          // Check if a consumer profile and wallet exist, if not, create them.
+          let consumer = await Consumer.findOne({ userId: user._id });
+          if (!consumer) {
+            let wallet = await Wallet.findOne({ userId: user._id });
+            if (!wallet) {
+                wallet = new Wallet({ userId: user._id, balance: 0 });
+                await wallet.save();
+            }
+            consumer = new Consumer({
+                userId: user._id,
+                walletId: wallet._id,
+            });
+            await consumer.save();
+          }
+          
           return done(null, user)
         }
 
@@ -36,22 +52,19 @@ passport.use(
           userName: profile.displayName || profile.emails?.[0].value?.split("@")[0] || "Google User",
           email: profile.emails?.[0].value,
           userType: "consumer",
-          isVerified: true, // Google email is already verified
-          // No mobileNumber is provided here
+          isVerified: true, 
         })
         await newUser.save()
 
-        // Create a wallet for the new user
         const newWallet = new Wallet({
           userId: newUser._id,
           balance: 0,
         });
         await newWallet.save();
 
-
         const newConsumer = new Consumer({
           userId: newUser._id,
-          walletId: newWallet._id, // Assign the new wallet's ID
+          walletId: newWallet._id,
         })
         await newConsumer.save()
 
