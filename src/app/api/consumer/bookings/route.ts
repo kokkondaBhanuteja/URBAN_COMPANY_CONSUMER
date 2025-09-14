@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
 import Booking from "@/database/bookingModel"
+import Consumer from "@/database/consumerModel"
 import { connectDb } from "@/lib/dbConnect"
 import { Types } from "mongoose"
 import { nanoid } from "nanoid" // <-- The missing import
