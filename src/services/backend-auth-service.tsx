@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken"
 import User from "@/database/userModel"
 import Consumer from "@/database/consumerModel"
+import Wallet from "@/database/walletModel" // Import the Wallet model
 import Otp from "@/database/otpModel"
-import { sendOtp } from "./otp-service" // <-- IMPORT the centralized function
+import { sendOtp } from "./otp-service" 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "2h"
@@ -175,9 +176,17 @@ export async function loginWithGoogle(
         })
         await user.save()
 
+        // Create a wallet for the new user
+        const newWallet = new Wallet({
+            userId: user._id,
+            balance: 0,
+        });
+        await newWallet.save();
+
         // Create consumer profile
         const newConsumer = new Consumer({
           userId: user._id,
+          walletId: newWallet._id, // Assign the new wallet's ID
         })
         await newConsumer.save()
       }

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Clock } from "lucide-react"
 import Link from "next/link"
 import { BookingDetailsModal } from "./booking-details-modal"
+import { useRouter } from "next/navigation"
 
 interface Booking {
   _id: string;
@@ -15,7 +16,7 @@ interface Booking {
   };
   bookingStatus: "requested" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled_by_user" | "cancelled_by_provider";
   scheduledAt: string;
-  createdAt: string; // Ensure createdAt is part of the interface
+  createdAt: string; 
   pricing: {
     finalAmount: number;
   };
@@ -33,6 +34,8 @@ interface RecentBookingsProps {
 export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProps) {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+
 
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -42,6 +45,10 @@ export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProp
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedBooking(null);
+  };
+
+    const handlePayNow = (booking: Booking) => {
+    router.push(`/cart?bookingId=${booking._id}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -139,6 +146,14 @@ export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProp
                       </Button>
                     </div>
                   )}
+
+                   {booking.bookingStatus === 'requested' && (
+                    <div className="mt-4 pt-4 border-t flex justify-end">
+                      <Button onClick={() => handlePayNow(booking)} size="sm">
+                        Pay Now
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -154,4 +169,3 @@ export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProp
     </>
   );
 }
-

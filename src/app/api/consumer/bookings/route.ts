@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "An array of services is required." }, { status: 400 });
     }
 
-    const orderId = nanoid(); // Generate a single orderId for this transaction
+    const orderId = nanoid(); 
     const createdBookings = [];
 
     for (const service of services) {
@@ -98,6 +98,10 @@ export async function POST(req: NextRequest) {
       const savedBooking = await booking.save();
       createdBookings.push(savedBooking);
     }
+
+    // Increment the totalBookings count for the consumer
+    await Consumer.findOneAndUpdate({ userId: new Types.ObjectId(userId) }, { $inc: { totalBookings: createdBookings.length } });
+
 
     return NextResponse.json(
       {
