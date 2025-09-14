@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Search, Menu, MapPin, User, LogOut, Briefcase, ShoppingBag } from "lucide-react"
+import { Search, Menu, User, LogOut, Briefcase, ShoppingBag, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -21,9 +21,9 @@ import {
 import { authService } from "@/services/authService"
 import { useCart } from "@/lib/cart-context"
 import { useDebounce } from "@/hooks/use-debounce"
-import { LocationSelector } from "./location-selector" // Import the new component
+import { LocationSelector } from "./location-selector"
 import type { Service } from "@/lib/content"
-import { useLocation } from "@/lib/location-context"; // Import useLocation
+import { useLocation } from "@/lib/location-context"
 
 interface AuthUser {
   id: string
@@ -39,9 +39,9 @@ export function NavigationHeader() {
   const router = useRouter()
   const { totalItems } = useCart()
 
-  const { location } = useLocation(); // Get location from context
+  const { location } = useLocation()
   const [searchQuery, setSearchQuery] = useState("")
-  const locationQuery = location?.city || ""; // Use location from context
+  const locationQuery = location?.city || ""
   const [searchResults, setSearchResults] = useState<Service[]>([])
   const [isSearchLoading, setIsSearchLoading] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -70,7 +70,7 @@ export function NavigationHeader() {
           location: locationQuery,
         })
         const response = await fetch(`/api/services?${params.toString()}`)
-        const data: Service[] = await response.json() // Expect a direct array
+        const data: Service[] = await response.json()
         setSearchResults(data)
         setIsPopoverOpen(data.length > 0 || debouncedSearchQuery.length > 0)
       } catch (error) {
@@ -86,12 +86,17 @@ export function NavigationHeader() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim() || locationQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&location=${encodeURIComponent(locationQuery.trim())}`)
+      router.push(
+        `/search?q=${encodeURIComponent(searchQuery.trim())}&location=${encodeURIComponent(
+          locationQuery.trim(),
+        )}`,
+      )
       setIsPopoverOpen(false)
     }
   }
 
-  const getInitials = (name: string) => (name ? name.split(" ").map((n) => n[0]).join("").toUpperCase() : "")
+  const getInitials = (name: string) =>
+    name ? name.split(" ").map((n) => n[0]).join("").toUpperCase() : ""
 
   const UserNav = () => (
     <DropdownMenu>
@@ -110,10 +115,34 @@ export function NavigationHeader() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link href="/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link></DropdownMenuItem>
-        <DropdownMenuItem asChild><Link href="/bookings"><Briefcase className="mr-2 h-4 w-4" /><span>My Bookings</span></Link></DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/profile">
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/wallet">
+            <Wallet className="mr-2 h-4 w-4" />
+            <span>Wallet</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/bookings">
+            <Briefcase className="mr-2 h-4 w-4" />
+            <span>My Bookings</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { authService.logout(); window.location.href = '/'; }}><LogOut className="mr-2 h-4 w-4" /><span>Log out</span></DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            authService.logout()
+            window.location.href = "/"
+          }}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -122,7 +151,12 @@ export function NavigationHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
-          <Link href="/" className="flex items-center space-x-2"><div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center"><span className="text-primary-foreground font-bold text-sm">UC</span></div><span className="font-bold text-xl hidden sm:inline-block">Urban Company</span></Link>
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">UC</span>
+            </div>
+            <span className="font-bold text-xl hidden sm:inline-block">Urban Company</span>
+          </Link>
 
           <div className="hidden md:flex flex-1 max-w-xl mx-auto">
             <div className="flex w-full items-center rounded-lg border bg-background shadow-sm">
@@ -131,21 +165,96 @@ export function NavigationHeader() {
                 <PopoverTrigger asChild>
                   <form onSubmit={handleSearchSubmit} className="relative w-full">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input placeholder="Search for services..." className="pl-10 pr-4 border-0 focus-visible:ring-0 focus-visible:ring-offset-0" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => searchQuery.length > 1 && setIsPopoverOpen(true)} />
+                    <Input
+                      placeholder="Search for services..."
+                      className="pl-10 pr-4 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => searchQuery.length > 1 && setIsPopoverOpen(true)}
+                    />
                   </form>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  {isSearchLoading ? (<div className="p-4 text-sm text-muted-foreground">Searching...</div>) : searchResults.length > 0 ? (<div className="max-h-96 overflow-y-auto">{searchResults.map((service) => (<Link key={service.id} href={`/service/${service.id}`} className="flex items-center gap-4 p-3 hover:bg-muted" onClick={() => setIsPopoverOpen(false)}><Image src={service.images[0] || "/placeholder.svg"} alt={service.title} width={40} height={40} className="rounded-md object-cover" /><span className="text-sm">{service.title}</span></Link>))}</div>) : (<div className="p-4 text-sm text-muted-foreground">No results found for &quot;{searchQuery}&quot;</div>)}
-                  {searchQuery && (<div className="p-2 border-t"><Button variant="link" className="w-full justify-start p-2 h-auto" asChild><Link href={`/search?q=${encodeURIComponent(searchQuery)}&location=${encodeURIComponent(locationQuery)}`} onClick={() => setIsPopoverOpen(false)}><Search className="h-4 w-4 mr-2" />View all results for &quot;{searchQuery}&quot;</Link></Button></div>)}
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                  align="start"
+                >
+                  {isSearchLoading ? (
+                    <div className="p-4 text-sm text-muted-foreground">Searching...</div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="max-h-96 overflow-y-auto">
+                      {searchResults.map((service) => (
+                        <Link
+                          key={service.id}
+                          href={`/service/${service.id}`}
+                          className="flex items-center gap-4 p-3 hover:bg-muted"
+                          onClick={() => setIsPopoverOpen(false)}
+                        >
+                          <Image
+                            src={service.images[0] || "/placeholder.svg"}
+                            alt={service.title}
+                            width={40}
+                            height={40}
+                            className="rounded-md object-cover"
+                          />
+                          <span className="text-sm">{service.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-sm text-muted-foreground">
+                      No results found for &quot;{searchQuery}&quot;
+                    </div>
+                  )}
+                  {searchQuery && (
+                    <div className="p-2 border-t">
+                      <Button variant="link" className="w-full justify-start p-2 h-auto" asChild>
+                        <Link
+                          href={`/search?q=${encodeURIComponent(
+                            searchQuery,
+                          )}&location=${encodeURIComponent(locationQuery)}`}
+                          onClick={() => setIsPopoverOpen(false)}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          View all results for &quot;{searchQuery}&quot;
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button asChild variant="ghost" size="icon" className="relative"><Link href="/cart"><ShoppingBag className="h-5 w-5" />{isClient && totalItems > 0 && (<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{totalItems}</span>)}</Link></Button>
-            <div className="hidden md:flex">{isClient && user ? (<UserNav />) : (<Button asChild variant="ghost" size="sm"><Link href="/login">Login / Sign Up</Link></Button>)}</div>
-            <div className="md:hidden"><Sheet open={isOpen} onOpenChange={setIsOpen}><SheetTrigger asChild><Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button></SheetTrigger><SheetContent side="right" className="w-full max-w-xs"></SheetContent></Sheet></div>
+            <Button asChild variant="ghost" size="icon" className="relative">
+              <Link href="/cart">
+                <ShoppingBag className="h-5 w-5" />
+                {isClient && totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            </Button>
+            <div className="hidden md:flex">
+              {isClient && user ? (
+                <UserNav />
+              ) : (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/login">Login / Sign Up</Link>
+                </Button>
+              )}
+            </div>
+            <div className="md:hidden">
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full max-w-xs"></SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>

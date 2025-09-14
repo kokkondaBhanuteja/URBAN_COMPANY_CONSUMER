@@ -3,6 +3,7 @@ import { connectDb } from "@/lib/dbConnect"
 import { verifyOtp } from "@/services/otp-service"
 import User from "@/database/userModel"
 import Consumer from "@/database/consumerModel"
+import Wallet from "@/database/walletModel" // <--- IMPORT WALLET MODEL
 import jwt from "jsonwebtoken"
 import { setCookie } from "@/lib/cookie-helper"
 
@@ -30,13 +31,22 @@ export async function POST(req: NextRequest) {
     })
     await newUser.save()
 
+    // Step 3: Create a wallet for the new user  // <--- ADD THIS BLOCK
+    const newWallet = new Wallet({
+      userId: newUser._id,
+      balance: 0,
+    });
+    await newWallet.save();
+
+
     const newConsumer = new Consumer({
       userId: newUser._id,
+      walletId: newWallet._id, // <--- LINK WALLET TO CONSUMER
       address: userData.address,
     })
     await newConsumer.save()
 
-    // Step 3: Automatically log the user in by creating a session token
+    // Step 4: Automatically log the user in by creating a session token
     const token = jwt.sign(
       {
         id: newUser._id.toString(),

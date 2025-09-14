@@ -1,15 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
-import Razorpay from "razorpay";
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
 import Booking from "@/database/bookingModel";
 import Payment from "@/database/paymentModel";
-import Refund from "@/database/refundModel";
-
-const razorpay = new Razorpay({
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+import Wallet from "@/database/walletModel"; // --- 1. IMPORT Wallet model
+import WalletTransaction from "@/database/walletTransactionModel"; // --- 2. IMPORT WalletTransaction model
+import { nanoid } from "nanoid";
 
 export async function POST(req: NextRequest, { params }: { params: { bookingId: string } }) {
   await connectDb();
@@ -53,45 +49,45 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       );
     }
 
-    // Find the associated payment
-    const payment = await Payment.findOne({ bookingId: booking._id });
-    if (!payment || !payment.transactionId) {
-      return NextResponse.json({ message: "Payment for this booking not found or is incomplete." }, { status: 404 });
+    // Find the associated payment to calculate the refund from
+    const payment = await Payment.findOne({ bookingIds: { $in: [booking._id] } });
+    if (!payment) {
+      return NextResponse.json({ message: "Payment for this booking not found." }, { status: 404 });
     }
     
-    // Rule 3: Calculate 10% refund
+    // --- 3. MODIFIED REFUND LOGIC ---
+
+    // Calculate 10% refund
     const refundAmount = payment.amount * 0.10;
-    const refundAmountInSubunits = Math.round(refundAmount * 100);
 
-    // Initiate refund with Razorpay
-    const refund = await razorpay.payments.refund(payment.transactionId, {
-      amount: refundAmountInSubunits,
-      speed: "normal",
-      notes: {
-        reason: "User cancelled booking within 24 hours.",
-        bookingId: booking._id.toString(),
-      },
-    });
+    // Find the user's wallet
+    const wallet = await Wallet.findOne({ userId: booking.userId });
+    if (!wallet) {
+      return NextResponse.json({ message: "User wallet not found. Cannot process refund." }, { status: 404 });
+    }
 
-    // Save refund details to our database
-    const newRefund = new Refund({
+    // Credit the refund amount to the wallet
+    wallet.balance += refundAmount;
+    await wallet.save();
+
+    // Create a wallet transaction record for the refund
+    await WalletTransaction.create({
+      walletId: wallet._id,
+      amount: refundAmount,
+      type: "credit",
+      reason: "refund",
       bookingId: booking._id,
-      paymentId_razorpay: payment.transactionId,
-      userId: booking.userId,
-      refundAmount: refundAmount,
-      status: "processed", 
-      refundId_razorpay: refund.id,
-      processedAt: new Date(),
+      transactionId: `refund_${nanoid()}`,
     });
-    await newRefund.save();
+    
+    // --- END OF MODIFIED LOGIC ---
 
     // Update the booking status
     booking.bookingStatus = "cancelled_by_user";
     await booking.save();
 
     return NextResponse.json({
-      message: "Booking cancelled successfully. A 10% refund has been initiated.",
-      refundDetails: newRefund,
+      message: `Booking cancelled successfully. ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(refundAmount)} has been credited to your wallet.`,
     });
 
   } catch (error: any) {
@@ -102,4 +98,3 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
     );
   }
 }
-
