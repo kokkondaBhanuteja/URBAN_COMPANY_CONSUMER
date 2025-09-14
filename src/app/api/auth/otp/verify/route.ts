@@ -3,7 +3,8 @@ import { connectDb } from "@/lib/dbConnect"
 import { verifyOtp } from "@/services/otp-service"
 import User from "@/database/userModel"
 import Consumer from "@/database/consumerModel"
-import Wallet from "@/database/walletModel" // <--- IMPORT WALLET MODEL
+import Wallet from "@/database/walletModel" 
+import Address from "@/database/addressmodel"
 import jwt from "jsonwebtoken"
 import { setCookie } from "@/lib/cookie-helper"
 
@@ -13,40 +14,40 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "2h"
 export async function POST(req: NextRequest) {
   await connectDb()
   try {
-    // The request now contains the full user data along with the OTP
     const { otp, ...userData } = await req.json()
-    const { email, password } = userData
+    const { email } = userData
 
-    // Step 1: Verify the OTP first
     const isOtpValid = await verifyOtp(email, otp)
     if (!isOtpValid) {
       throw new Error("Invalid or expired OTP. Please try again.")
     }
 
-    // Step 2: If OTP is valid, create the User and Consumer in the database
     const newUser = new User({
       ...userData,
       email: email.toLowerCase(),
-      isVerified: true, // Mark as verified since OTP was successful
+      isVerified: true,
     })
     await newUser.save()
 
-    // Step 3: Create a wallet for the new user  // <--- ADD THIS BLOCK
     const newWallet = new Wallet({
       userId: newUser._id,
       balance: 0,
     });
     await newWallet.save();
 
+    const newAddress = new Address({
+        userId: newUser._id,
+        ...userData.address
+    });
+    await newAddress.save();
 
     const newConsumer = new Consumer({
       userId: newUser._id,
-      walletId: newWallet._id, // <--- LINK WALLET TO CONSUMER
-      address: userData.address,
+      walletId: newWallet._id, 
+      address: newAddress,
     })
     await newConsumer.save()
 
-    // Step 4: Automatically log the user in by creating a session token
     const token = jwt.sign(
       {
         id: newUser._id.toString(),
@@ -67,11 +68,10 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Set the httpOnly cookie for the new session
     setCookie(response, "token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 60 * 60, 
       path: "/",
     })
 

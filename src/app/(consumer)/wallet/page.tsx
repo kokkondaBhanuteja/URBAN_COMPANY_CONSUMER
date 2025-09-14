@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { openRazorpayCheckout } from "@/lib/payments";
+import { loadRazorpayScript } from "@/lib/payments";
 import { authService } from "@/services/authService";
 
 const fetchWalletData = async () => {
@@ -42,60 +42,83 @@ export default function WalletPage() {
     }
 
     setIsToppingUp(true);
+
     try {
-        const orderResponse = await fetch('/api/wallet/topup', {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error("Could not load payment gateway. Please check your connection.");
+      }
+
+      const orderResponse = await fetch('/api/wallet/topup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ amount })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error("Failed to create Razorpay order");
+      }
+      
+      // --- FIX ---
+      // Correctly destructure the 'order' object from the API response
+      const { order } = await orderResponse.json();
+      if (!order) {
+        throw new Error("Invalid order response from server.");
+      }
+      // --- END OF FIX ---
+
+      const razorpayOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount: order.amount, // Now this will correctly use the amount from the server
+        currency: order.currency,
+        name: "Urban Company",
+        description: "Wallet Top-up",
+        order_id: order.id,
+        prefill: {
+          name: user?.fullName,
+          email: user?.email,
+        },
+        handler: async (response: any) => {
+          const verifyResponse = await fetch('/api/wallet/verify-topup', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ amount })
-        });
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              amount,
+            }),
+          });
 
-        if (!orderResponse.ok) {
-            throw new Error("Failed to create Razorpay order");
+          if (!verifyResponse.ok) {
+            throw new Error("Failed to verify topup");
+          }
+          toast.success("Top-up successful!");
+          refetch();
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment cancelled", { description: "The top-up was cancelled." });
+          }
+        },
+        theme: {
+            color: "#0e0e0e"
         }
-
-        const { order } = await orderResponse.json();
-
-        const result = await openRazorpayCheckout({
-            amountSubunits: order.amount,
-            currency: 'INR',
-            prefill: {
-                name: user?.fullName,
-                email: user?.email,
-            },
-            notes: {
-                purpose: 'wallet_topup'
-            }
-        });
-
-        if (result.success && result.paymentId && result.orderId && result.signature) {
-            const verifyResponse = await fetch('/api/wallet/verify-topup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    razorpay_order_id: result.orderId,
-                    razorpay_payment_id: result.paymentId,
-                    razorpay_signature: result.signature,
-                    amount,
-                }),
-            });
-
-            if (!verifyResponse.ok) {
-                throw new Error("Failed to verify topup");
-            }
-            toast.success("Top-up successful!");
-            refetch();
-        }
-
+      };
+      
+      // @ts-ignore - Razorpay is loaded dynamically onto the window object
+      const rzp = new window.Razorpay(razorpayOptions);
+      rzp.open();
 
     } catch (error: any) {
-        toast.error("Top-up failed", { description: error.message });
+      toast.error("Top-up failed", { description: error.message });
     } finally {
-        setIsToppingUp(false);
-        setTopupAmount("");
+      setIsToppingUp(false);
+      setTopupAmount("");
     }
   };
 
@@ -126,23 +149,23 @@ export default function WalletPage() {
                   </CardContent>
                 </Card>
                 <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle>Add Money to Wallet</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex gap-2">
-                        <Input
-                            type="number"
-                            placeholder="Enter amount"
-                            value={topupAmount}
-                            onChange={(e) => setTopupAmount(e.target.value)}
-                            disabled={isToppingUp}
-                        />
-                        <Button onClick={handleTopup} disabled={isToppingUp}>
-                            {isToppingUp ? "Processing..." : "Top-up"}
-                        </Button>
-                        </div>
-                    </CardContent>
+                  <CardHeader>
+                    <CardTitle>Add Money to Wallet</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={topupAmount}
+                        onChange={(e) => setTopupAmount(e.target.value)}
+                        disabled={isToppingUp}
+                      />
+                      <Button onClick={handleTopup} disabled={isToppingUp}>
+                        {isToppingUp ? "Processing..." : "Top-up"}
+                      </Button>
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
               <div>

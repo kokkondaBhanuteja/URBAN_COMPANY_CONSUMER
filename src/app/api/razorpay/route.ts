@@ -1,4 +1,3 @@
-// src/app/api/razorpay/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { nanoid } from "nanoid";
@@ -20,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const order = await razorpay.orders.create(options);
 
-    return NextResponse.json({ order });
+    return NextResponse.json(order);
   } catch (error) {
     console.error("Razorpay order creation error:", error);
     return NextResponse.json(

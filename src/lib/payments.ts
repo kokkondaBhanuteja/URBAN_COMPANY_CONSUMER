@@ -98,8 +98,12 @@ export async function openRazorpayCheckout(
       error: "Failed to create Razorpay order.",
     };
   }
+  
+  // --- FIX START ---
+  // The API returns the order object directly, so we don't need to destructure it.
+  const order = await orderResponse.json();
+  // --- FIX END ---
 
-  const { order } = await orderResponse.json();
 
   return new Promise((resolve) => {
     const razorpayOptions = {

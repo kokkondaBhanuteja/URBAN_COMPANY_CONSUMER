@@ -22,13 +22,7 @@ export async function GET(
 
     const payment = await razorpay.payments.fetch(paymentId);
 
-    return NextResponse.json({
-      method: payment.method,
-      card_details: payment.card,
-      bank: payment.bank,
-      wallet: payment.wallet,
-      vpa: payment.vpa,
-    });
+    return NextResponse.json(payment);
   } catch (error) {
     console.error("Razorpay payment fetch error:", error);
     return NextResponse.json(

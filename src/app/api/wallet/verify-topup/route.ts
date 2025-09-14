@@ -31,16 +31,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: "Wallet not found" }, { status: 404 });
       }
 
+      // --- FIX START ---
+      const balanceBefore = wallet.balance;
+
       wallet.balance += amount;
       await wallet.save();
+
+      const balanceAfter = wallet.balance;
 
       await WalletTransaction.create({
         walletId: wallet._id,
         amount: amount,
         type: "credit",
-        reason: "topup",
-        transactionId: razorpay_payment_id,
+        reason: "wallet_topup", // Use the correct reason from the schema
+        balanceBefore, // Add the balance before the transaction
+        balanceAfter, // Add the balance after the transaction
+        description: `Wallet top-up of ${new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR",
+        }).format(amount)}`, // Add a meaningful description
+        externalTransactionId: razorpay_payment_id, // Use the correct field for external IDs
       });
+      // --- FIX END ---
 
       return NextResponse.json({ message: "Top-up successful", balance: wallet.balance });
     } else {

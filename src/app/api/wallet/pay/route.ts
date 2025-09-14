@@ -28,22 +28,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
     }
 
-    // 1. Debit the wallet
+    // --- FIX START ---
+    // 1. Capture the balance *before* the transaction.
+    const balanceBefore = wallet.balance;
+
+    // 2. Debit the wallet
     wallet.balance -= amount;
     await wallet.save();
+    
+    // The new balance is the balance *after* the transaction.
+    const balanceAfter = wallet.balance;
 
-    // 2. Create a wallet transaction record
+    // 3. Create a wallet transaction record with all required fields.
     await WalletTransaction.create({
       walletId: wallet._id,
       amount: amount,
       type: "debit",
       reason: "booking_payment",
-      bookingId: bookingIds[0], // Assuming one booking for now
+      balanceBefore,
+      balanceAfter,
+      description: `Payment for booking(s) associated with order.`, // Add a meaningful description
+      relatedBookingId: bookingIds[0], // Link to the first booking for reference
     });
+    // --- FIX END ---
 
     const orderId = nanoid();
 
-    // 3. Create a payment record
+    // Create a payment record
     const newPayment = new Payment({
         orderId: orderId,
         bookingIds: bookingIds.map((id: string) => new Types.ObjectId(id)),
@@ -55,13 +66,13 @@ export async function POST(req: NextRequest) {
     });
     await newPayment.save();
 
-    // 4. Update booking status
+    // Update booking status
     await Booking.updateMany(
         { _id: { $in: bookingIds.map((id: string) => new Types.ObjectId(id)) } },
         { $set: { bookingStatus: 'confirmed' } }
     );
     
-    // 5. Assign providers to the bookings
+    // Assign providers to the bookings
     for (const bookingId of bookingIds) {
         await fetch(`${req.nextUrl.origin}/api/consumer/bookings/${bookingId}/assign-provider`, {
             method: 'POST',
