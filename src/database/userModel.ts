@@ -25,7 +25,7 @@ const userSchema = new Schema<IUser>(
       trim: true,
     },
     // Make mobileNumber optional by removing 'required: true' and 'unique: true'
-    mobileNumber: { type: String },
+    mobileNumber: { type: String, sparse: true },
     password: { type: String },
     userType: {
       type: String,
