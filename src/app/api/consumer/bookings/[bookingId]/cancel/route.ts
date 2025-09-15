@@ -3,8 +3,8 @@ import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
 import Booking from "@/database/bookingModel";
 import Payment from "@/database/paymentModel";
-import Wallet from "@/database/walletModel"; // --- 1. IMPORT Wallet model
-import WalletTransaction from "@/database/walletTransactionModel"; // --- 2. IMPORT WalletTransaction model
+import Wallet from "@/database/walletModel";
+import WalletTransaction from "@/database/walletTransactionModel";
 import { nanoid } from "nanoid";
 
 export async function POST(req: NextRequest, { params }: { params: { bookingId: string } }) {
@@ -30,7 +30,6 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
     }
 
-    // Rule 1: Check if booking is in a cancellable state
     const cancellableStatuses = ["requested", "confirmed", "assigned"];
     if (!cancellableStatuses.includes(booking.bookingStatus)) {
       return NextResponse.json(
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       );
     }
 
-    // Rule 2: Check if within 24 hours of creation
     const twentyFourHours = 24 * 60 * 60 * 1000;
     const timeDifference = new Date().getTime() - new Date(booking.createdAt).getTime();
     if (timeDifference > twentyFourHours) {
@@ -49,40 +47,37 @@ export async function POST(req: NextRequest, { params }: { params: { bookingId: 
       );
     }
 
-    // Find the associated payment to calculate the refund from
     const payment = await Payment.findOne({ bookingIds: { $in: [booking._id] } });
     if (!payment) {
       return NextResponse.json({ message: "Payment for this booking not found." }, { status: 404 });
     }
     
-    // --- 3. MODIFIED REFUND LOGIC ---
-
-    // Calculate 10% refund
     const refundAmount = payment.amount * 0.10;
 
-    // Find the user's wallet
     const wallet = await Wallet.findOne({ userId: booking.userId });
     if (!wallet) {
       return NextResponse.json({ message: "User wallet not found. Cannot process refund." }, { status: 404 });
     }
 
-    // Credit the refund amount to the wallet
+    // --- FIX START ---
+    const balanceBefore = wallet.balance;
     wallet.balance += refundAmount;
     await wallet.save();
+    const balanceAfter = wallet.balance;
 
-    // Create a wallet transaction record for the refund
     await WalletTransaction.create({
       walletId: wallet._id,
       amount: refundAmount,
       type: "credit",
-      reason: "refund",
-      bookingId: booking._id,
-      transactionId: `refund_${nanoid()}`,
+      reason: "booking_refund", // Corrected reason
+      balanceBefore,
+      balanceAfter,
+      description: `Refund for cancelled booking #${booking._id.toString().slice(-6)}`, // Added description
+      relatedBookingId: booking._id,
+      externalTransactionId: `refund_${nanoid()}`,
     });
-    
-    // --- END OF MODIFIED LOGIC ---
+    // --- FIX END ---
 
-    // Update the booking status
     booking.bookingStatus = "cancelled_by_user";
     await booking.save();
 
