@@ -64,8 +64,8 @@ export default function WalletPage() {
       
       // --- FIX ---
       // Correctly destructure the 'order' object from the API response
-      const { order } = await orderResponse.json();
-      if (!order) {
+      const  order  = await orderResponse.json();
+      if (!order || !order.id) {
         throw new Error("Invalid order response from server.");
       }
       // --- END OF FIX ---

@@ -2,7 +2,8 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface IPayment extends Document {
   orderId: string;
-  bookingIds: Types.ObjectId[]; // <-- ADD THIS
+  bookingId?: Types.ObjectId; // Add this optional field
+  bookingIds: Types.ObjectId[];
   userId: Types.ObjectId;
   amount: number;
   paymentMethod: string;
@@ -19,7 +20,16 @@ const paymentSchema = new Schema<IPayment>(
       required: true,
       unique: true,
     },
-    bookingIds: [{ // <-- ADD THIS
+    // Add the bookingId to satisfy the database's unique index
+    bookingId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Booking',
+      unique: true,
+      // sparse: true allows multiple documents to have a null value,
+      // which is good practice for optional unique fields.
+      sparse: true,
+    },
+    bookingIds: [{
       type: Schema.Types.ObjectId,
       ref: 'Booking',
       required: true,
@@ -47,5 +57,5 @@ const paymentSchema = new Schema<IPayment>(
 
 const Payment =
   mongoose.models.Payment || mongoose.model<IPayment>("Payment", paymentSchema);
-  
+
 export default Payment;

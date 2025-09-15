@@ -21,7 +21,7 @@ export const connectDb = async (): Promise<void> => {
   try {
     // console.log("Before", mongoose.connection.readyState);
     if (mongoose.connection.readyState === 1) {
-      console.log("Db is already Connected, skipping")
+      // console.log("Db is already Connected, skipping")
       return
     }
     await mongoose.connect(MONGODB_URL, {

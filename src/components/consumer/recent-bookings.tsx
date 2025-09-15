@@ -16,7 +16,7 @@ interface Booking {
   };
   bookingStatus: "requested" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled_by_user" | "cancelled_by_provider";
   scheduledAt: string;
-  createdAt: string; 
+  createdAt: string;
   pricing: {
     finalAmount: number;
   };
@@ -47,8 +47,8 @@ export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProp
     setSelectedBooking(null);
   };
 
-    const handlePayNow = (booking: Booking) => {
-    router.push(`/cart?bookingId=${booking._id}`);
+  const handlePayNow = (booking: Booking) => {
+    router.push(`/checkout/${booking._id}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -138,7 +138,7 @@ export function RecentBookings({ bookings, onBookingUpdate }: RecentBookingsProp
                       <div className="text-sm font-medium">{formatCurrency(booking.pricing.finalAmount)}</div>
                     </div>
                   </div>
-                  
+
                   {booking.bookingStatus === 'completed' && (
                     <div className="mt-4 pt-4 border-t flex justify-end">
                       <Button asChild size="sm" variant="outline">

@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     // Create a payment record
     const newPayment = new Payment({
         orderId: orderId,
+        bookingId: bookingIds[0], // Link to the first booking for reference
         bookingIds: bookingIds.map((id: string) => new Types.ObjectId(id)),
         userId: new Types.ObjectId(userId),
         amount,

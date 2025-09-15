@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle, ArrowLeft } from "lucide-react"
+import { CheckCircle, ArrowLeft, Wallet } from "lucide-react" // Import Wallet icon
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PaymentButton } from "./payment-button"
@@ -22,9 +22,12 @@ interface PaymentSheetProps {
     email?: string
     contact?: string
   }
+  walletBalance?: number; // Add wallet balance
+  onPayWithWallet?: () => void; // Add wallet payment handler
+  isPaymentLoading?: boolean; // To show loading state
 }
 
-export function PaymentSheet({ amountSubunits, currency = "INR", items, onSuccess, onCancel, prefill }: PaymentSheetProps) {
+export function PaymentSheet({ amountSubunits, currency = "INR", items, onSuccess, onCancel, prefill, walletBalance, onPayWithWallet, isPaymentLoading }: PaymentSheetProps) {
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
   const [showReceipt, setShowReceipt] = useState(false)
 
@@ -122,7 +125,20 @@ export function PaymentSheet({ amountSubunits, currency = "INR", items, onSucces
           </div>
         </div>
 
-        {/* Payment Button */}
+        {/* Wallet Payment Option */}
+        {walletBalance && walletBalance >= amountSubunits / 100 && (
+          <div className="space-y-2">
+             <Button onClick={onPayWithWallet} className="w-full" disabled={isPaymentLoading}>
+                <Wallet className="w-4 h-4 mr-2" />
+                {isPaymentLoading ? "Processing..." : `Pay with Wallet (${formatCurrency(walletBalance * 100)})`}
+            </Button>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+        )}
+
+        {/* Card Payment Button */}
         <PaymentButton
           amountSubunits={amountSubunits}
           currency={currency}
@@ -132,6 +148,7 @@ export function PaymentSheet({ amountSubunits, currency = "INR", items, onSucces
             items_count: items.length.toString(),
           }}
           onResult={handlePaymentResult}
+          disabled={isPaymentLoading}
         >
           Pay {formatCurrency(amountSubunits, currency)}
         </PaymentButton>

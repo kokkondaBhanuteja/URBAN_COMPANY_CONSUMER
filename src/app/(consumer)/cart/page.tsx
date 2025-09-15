@@ -40,9 +40,8 @@ export default function CartPage() {
   const { data: wallet, isLoading: isWalletLoading } = useQuery({
     queryKey: ['walletBalance'],
     queryFn: fetchWalletBalance,
-    enabled: !!user, // Only fetch if user is logged in
+    enabled: !!user,
   });
-
 
   const formatPrice = (priceSubunits: number) => {
     return (priceSubunits / 100).toLocaleString("en-IN", {
@@ -67,13 +66,13 @@ export default function CartPage() {
   const handleBookingSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      // 1. Map the cart items to the format the API expects.
-      const servicesPayload = items.map(item => ({
-        serviceId: item.serviceId,
-        totalPrice: (item.unitPriceSubunits * item.qty) / 100,
-      }));
+      const servicesPayload = items.flatMap(item => (
+        Array.from({ length: item.qty }, () => ({
+            serviceId: item.serviceId,
+            totalPrice: item.unitPriceSubunits / 100,
+        }))
+      ));
 
-      // 2. Send the correctly structured payload with a 'services' array.
       const response = await fetch("/api/consumer/bookings", {
         method: "POST",
         headers: {
@@ -95,15 +94,17 @@ export default function CartPage() {
 
       const result = await response.json()
 
-      // 3. CORRECTLY store the orderId and bookingIds array from the API response.
       setBookingData({
         ...formData,
         orderId: result.orderId,
         bookingIds: result.bookingIds,
+        // Store the total amount for the payment sheet
+        totalAmountForPayment: totalAmountSubunits,
       })
 
       setShowCheckout(true)
       setShowBookingForm(false)
+      // Do NOT clear the cart here. Clear it after payment.
     } catch (error: any) {
       toast.error("Booking creation failed", {
         description: error.message || "Please try again.",
@@ -127,14 +128,13 @@ export default function CartPage() {
       const paymentDetailsResponse = await fetch(`/api/razorpay/${result.paymentId}`)
       const paymentDetails = await paymentDetailsResponse.json()
 
-      // 1. Save payment details with the correct orderId and bookingIds
       await fetch("/api/consumer/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          orderId: bookingData.orderId, // <-- FIX: Send the correct orderId
-          bookingIds: bookingData.bookingIds, // <-- FIX: Send the array of booking IDs
+          orderId: bookingData.orderId,
+          bookingIds: bookingData.bookingIds,
           amount: totalAmountSubunits / 100,
           paymentMethod: paymentDetails.method || 'online',
           paymentStatus: "successful",
@@ -142,26 +142,24 @@ export default function CartPage() {
         }),
       })
 
-      // 2. Loop through each booking to trigger provider assignment and payouts
       for (const bookingId of bookingData.bookingIds) {
-        // Assign a provider for EACH booking
         await fetch(`/api/consumer/bookings/${bookingId}/assign-provider`, {
           method: "POST",
           credentials: "include",
         })
 
-        // Create a payout for EACH booking
         await fetch("/api/payouts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ bookingId: bookingId }), // Send the individual bookingId
+          body: JSON.stringify({ bookingId: bookingId }),
         })
       }
 
       toast.success("Payment successful!", {
         description: "We are now assigning a top-rated professional for your service.",
       })
+      clearCart();
     } catch (error) {
       console.error("Post-payment processing failed:", error)
       toast.error("Payment Recording Failed", {
@@ -169,7 +167,6 @@ export default function CartPage() {
       })
     } finally {
       setLoading(false)
-      // Clean up the state and redirect the user
       handleCheckoutClose()
     }
   }
@@ -231,15 +228,8 @@ export default function CartPage() {
         <NavigationHeader />
         <main className="py-16">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-            {wallet && wallet.balance >= totalAmountSubunits / 100 && (
-                <div className="mb-4">
-                    <Button onClick={handlePayWithWallet} className="w-full" disabled={loading}>
-                        {loading ? "Processing..." : `Pay with Wallet (${formatPrice(wallet.balance * 100)})`}
-                    </Button>
-                </div>
-            )}
             <PaymentSheet
-              amountSubunits={totalAmountSubunits}
+              amountSubunits={bookingData.totalAmountForPayment}
               currency="INR"
               items={paymentItems}
               onSuccess={handlePaymentSuccess}
@@ -248,6 +238,9 @@ export default function CartPage() {
                 name: user?.fullName,
                 email: user?.email,
               }}
+              walletBalance={wallet?.balance}
+              onPayWithWallet={handlePayWithWallet}
+              isPaymentLoading={loading}
             />
           </div>
         </main>

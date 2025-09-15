@@ -12,7 +12,7 @@ export const createProviderPayout = async (bookingId: string) => {
   // 2. CORRECTED QUERY: Find the payment by searching for the bookingId
   // inside the 'bookingIds' array.
   const payment = await Payment.findOne({ bookingIds: booking._id });
-  
+
   if (!payment) {
     throw new Error("Payment not found for the booking");
   }
@@ -23,7 +23,7 @@ export const createProviderPayout = async (bookingId: string) => {
 
   // 3. IMPROVED CALCULATION: Use the price from the individual booking,
   // not the total payment amount for the whole order.
-  const bookingPrice = booking.pricing.finalAmount; 
+  const bookingPrice = booking.pricing.finalAmount;
   const commissionAmount = bookingPrice * 0.1; // 10% commission
   const netPayout = bookingPrice - commissionAmount;
 

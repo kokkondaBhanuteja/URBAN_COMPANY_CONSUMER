@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const order = await razorpay.orders.create(options);
 
-    return NextResponse.json({ order });
+    return NextResponse.json( order );
   } catch (error) {
     console.error("Razorpay wallet topup error:", error);
     return NextResponse.json(
