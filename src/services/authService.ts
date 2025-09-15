@@ -28,7 +28,22 @@ export const authService = {
     this.setUser(data.user)
     return data
   },
+  
+  async resendOTP(email: string): Promise<void> {
+    const response = await fetch("/api/auth/otp/resend", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
 
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to resend OTP");
+    }
+  },
   setUser(user: User) {
     if (typeof window !== "undefined") {
       localStorage.setItem("uc-user", JSON.stringify(user))
