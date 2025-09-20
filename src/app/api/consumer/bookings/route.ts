@@ -1,49 +1,52 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
-import Booking from "@/database/bookingModel"
-import Consumer from "@/database/consumerModel"
-import { connectDb } from "@/lib/dbConnect"
-import { Types } from "mongoose"
-import { nanoid } from "nanoid" // <-- The missing import
+import { type NextRequest, NextResponse } from "next/server";
+import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
+import Booking from "@/database/bookingModel";
+import Consumer from "@/database/consumerModel";
+import { connectDb } from "@/lib/dbConnect";
+import { Types, startSession } from "mongoose";
+import { nanoid } from "nanoid";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
-  await connectDb()
-
+  await connectDb();
   try {
-    const middlewareResponse = await consumerMiddleware(req)
+    const middlewareResponse = await consumerMiddleware(req);
     if (middlewareResponse instanceof NextResponse) {
       return middlewareResponse;
     }
-    const userId = middlewareResponse.get("x-user-id")
+    const userId = middlewareResponse.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found in headers" }, { status: 401 })
+      return NextResponse.json(
+        { message: "User ID not found in headers" },
+        { status: 401 }
+      );
     }
 
-    const { searchParams } = new URL(req.url)
-    const status = searchParams.get("status")
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status");
+    const page = Number.parseInt(searchParams.get("page") || "1");
+    const limit = Number.parseInt(searchParams.get("limit") || "10");
 
-    const query: any = { userId: new Types.ObjectId(userId) }
+    const query: any = { userId: new Types.ObjectId(userId) };
     if (status) {
-      query.bookingStatus = status
+      query.bookingStatus = status;
     }
 
     const bookings = await Booking.find(query)
       .populate("serviceId", "serviceName basePrice")
       .populate({
-        path: 'providerId',
+        path: "providerId",
         populate: {
-           path: 'userId',
-           select: 'userName'
-        }
+          path: "userId",
+          select: "userName",
+        },
       })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit)
+      .limit(limit);
 
-    const total = await Booking.countDocuments(query)
+    const total = await Booking.countDocuments(query);
 
     return NextResponse.json({
       bookings,
@@ -53,34 +56,45 @@ export async function GET(req: NextRequest) {
         total,
         pages: Math.ceil(total / limit),
       },
-    })
+    });
   } catch (error: any) {
-    console.error("Bookings fetch error:", error)
-    return NextResponse.json({ message: error.message || "An error occurred while fetching bookings" }, { status: 500 })
+    logger.error("Bookings fetch error:", error);
+    return NextResponse.json(
+      { message: error.message || "An error occurred while fetching bookings" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
-  await connectDb()
-
+  await connectDb();
+  const session = await startSession();
+  session.startTransaction();
   try {
-    const middlewareResponse = await consumerMiddleware(req)
-     if (middlewareResponse instanceof NextResponse) {
+    const middlewareResponse = await consumerMiddleware(req);
+    if (middlewareResponse instanceof NextResponse) {
       return middlewareResponse;
     }
-    const userId = middlewareResponse.get("x-user-id")
+    const userId = middlewareResponse.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found in headers" }, { status: 401 })
+      return NextResponse.json(
+        { message: "User ID not found in headers" },
+        { status: 401 }
+      );
     }
 
-    const { services, serviceAddress, scheduledAt, specialInstructions } = await req.json();
+    const { services, serviceAddress, scheduledAt, specialInstructions } =
+      await req.json();
 
     if (!Array.isArray(services) || services.length === 0) {
-      return NextResponse.json({ message: "An array of services is required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "An array of services is required." },
+        { status: 400 }
+      );
     }
 
-    const orderId = nanoid(); 
+    const orderId = nanoid();
     const createdBookings = [];
 
     for (const service of services) {
@@ -96,24 +110,37 @@ export async function POST(req: NextRequest) {
         },
         specialInstructions,
       });
-      const savedBooking = await booking.save();
+      const savedBooking = await booking.save({ session });
       createdBookings.push(savedBooking);
     }
 
     // Increment the totalBookings count for the consumer
-    await Consumer.findOneAndUpdate({ userId: new Types.ObjectId(userId) }, { $inc: { totalBookings: createdBookings.length } });
+    await Consumer.findOneAndUpdate(
+      { userId: new Types.ObjectId(userId) },
+      { $inc: { totalBookings: createdBookings.length } },
+      { session }
+    );
 
+    await session.commitTransaction();
+    session.endSession();
 
     return NextResponse.json(
       {
         message: "Bookings created successfully",
         orderId,
-        bookingIds: createdBookings.map(b => b._id),
+        bookingIds: createdBookings.map((b) => b._id),
       },
-      { status: 201 },
-    )
+      { status: 201 }
+    );
   } catch (error: any) {
-    console.error("Booking creation error:", error)
-    return NextResponse.json({ message: error.message || "An error occurred while creating booking" }, { status: 500 })
+    await session.abortTransaction();
+    session.endSession();
+    logger.error("Booking creation error:", error);
+    return NextResponse.json(
+      {
+        message: error.message || "An error occurred while creating booking",
+      },
+      { status: 500 }
+    );
   }
 }

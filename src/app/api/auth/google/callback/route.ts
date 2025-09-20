@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { setCookie } from "@/lib/cookie-helper"
 import { loginWithGoogle } from "@/services/backend-auth-service"
 import { connectDb } from "@/lib/dbConnect"
+import logger from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   await connectDb()
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
 
     return response
   } catch (error) {
-    console.error("Google OAuth callback error:", error)
+    logger.error("Google OAuth callback error:", error)
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred"
     const loginUrl = new URL("/login", req.url)
     loginUrl.searchParams.set("error", errorMessage)

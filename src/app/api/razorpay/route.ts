@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { nanoid } from "nanoid";
+import logger from "@/lib/logger";
 
 const razorpay = new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error("Razorpay order creation error:", error);
+    logger.error("Razorpay order creation error:", error);
     return NextResponse.json(
       { message: "Failed to create Razorpay order" },
       { status: 500 }

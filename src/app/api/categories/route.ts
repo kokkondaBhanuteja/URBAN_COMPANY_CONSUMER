@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/dbConnect";
 import { getServiceCategories } from "@/services/consumer/serviceDiscoveryService";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(transformedCategories);
   } catch (error) {
-    console.error("Categories fetch error:", error);
+    logger.error("Categories fetch error:", error);
     return NextResponse.json(
       { message: "Failed to fetch categories" },
       { status: 500 }

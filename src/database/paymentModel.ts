@@ -9,6 +9,7 @@ export interface IPayment extends Document {
   paymentMethod: string;
   paymentStatus: "pending" | "successful" | "failed";
   transactionId?: string;
+  razorpayResponse?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +52,8 @@ const paymentSchema = new Schema<IPayment>(
       index: true,
     },
     transactionId: { type: String, unique: true, sparse: true },
+    razorpayResponse: { type: Object }, // Added to store the Razorpay response
+
   },
   { timestamps: true }
 );

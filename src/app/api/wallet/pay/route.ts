@@ -5,11 +5,14 @@ import Wallet from "@/database/walletModel";
 import WalletTransaction from "@/database/walletTransactionModel";
 import Booking from "@/database/bookingModel";
 import Payment from "@/database/paymentModel";
-import { Types } from "mongoose";
+import { Types, startSession } from "mongoose";
 import { nanoid } from "nanoid";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   await connectDb();
+  const session = await startSession();
+  session.startTransaction();
   try {
     const middlewareResponse = await consumerMiddleware(req);
     if (middlewareResponse instanceof NextResponse) {
@@ -18,73 +21,86 @@ export async function POST(req: NextRequest) {
     const userId = middlewareResponse.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found" }, { status: 401 });
+      return NextResponse.json(
+        { message: "User ID not found" },
+        { status: 401 }
+      );
     }
 
     const { bookingIds, amount } = await req.json();
 
-    const wallet = await Wallet.findOne({ userId });
+    const wallet = await Wallet.findOne({ userId }).session(session);
     if (!wallet || wallet.balance < amount) {
-      return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Insufficient wallet balance" },
+        { status: 400 }
+      );
     }
 
-    // --- FIX START ---
-    // 1. Capture the balance *before* the transaction.
     const balanceBefore = wallet.balance;
 
-    // 2. Debit the wallet
     wallet.balance -= amount;
-    await wallet.save();
-    
-    // The new balance is the balance *after* the transaction.
+    await wallet.save({ session });
+
     const balanceAfter = wallet.balance;
 
-    // 3. Create a wallet transaction record with all required fields.
-    await WalletTransaction.create({
-      walletId: wallet._id,
-      amount: amount,
-      type: "debit",
-      reason: "booking_payment",
-      balanceBefore,
-      balanceAfter,
-      description: `Payment for booking(s) associated with order.`, // Add a meaningful description
-      relatedBookingId: bookingIds[0], // Link to the first booking for reference
-    });
-    // --- FIX END ---
+    await WalletTransaction.create(
+      [
+        {
+          walletId: wallet._id,
+          amount: amount,
+          type: "debit",
+          reason: "booking_payment",
+          balanceBefore,
+          balanceAfter,
+          description: `Payment for booking(s) associated with order.`,
+          relatedBookingId: bookingIds[0],
+        },
+      ],
+      { session }
+    );
 
     const orderId = nanoid();
 
-    // Create a payment record
     const newPayment = new Payment({
-        orderId: orderId,
-        bookingId: bookingIds[0], // Link to the first booking for reference
-        bookingIds: bookingIds.map((id: string) => new Types.ObjectId(id)),
-        userId: new Types.ObjectId(userId),
-        amount,
-        paymentMethod: 'wallet',
-        paymentStatus: 'successful',
-        transactionId: `wallet_${nanoid()}`,
+      orderId: orderId,
+      bookingId: bookingIds[0],
+      bookingIds: bookingIds.map((id: string) => new Types.ObjectId(id)),
+      userId: new Types.ObjectId(userId),
+      amount,
+      paymentMethod: "wallet",
+      paymentStatus: "successful",
+      transactionId: `wallet_${nanoid()}`,
     });
-    await newPayment.save();
+    await newPayment.save({ session });
 
-    // Update booking status
     await Booking.updateMany(
-        { _id: { $in: bookingIds.map((id: string) => new Types.ObjectId(id)) } },
-        { $set: { bookingStatus: 'confirmed' } }
+      { _id: { $in: bookingIds.map((id: string) => new Types.ObjectId(id)) } },
+      { $set: { bookingStatus: "confirmed" } },
+      { session }
     );
-    
-    // Assign providers to the bookings
+
     for (const bookingId of bookingIds) {
-        await fetch(`${req.nextUrl.origin}/api/consumer/bookings/${bookingId}/assign-provider`, {
-            method: 'POST',
-            headers: req.headers,
-        });
+      await fetch(
+        `${req.nextUrl.origin}/api/consumer/bookings/${bookingId}/assign-provider`,
+        {
+          method: "POST",
+          headers: req.headers,
+        }
+      );
     }
 
-    return NextResponse.json({ message: "Payment from wallet successful" });
+    await session.commitTransaction();
+    session.endSession();
 
+    return NextResponse.json({ message: "Payment from wallet successful" });
   } catch (error: any) {
-    console.error("Wallet payment error:", error);
-    return NextResponse.json({ message: error.message || "Failed to process wallet payment" }, { status: 500 });
+    await session.abortTransaction();
+    session.endSession();
+    logger.error("Wallet payment error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to process wallet payment" },
+      { status: 500 }
+    );
   }
 }

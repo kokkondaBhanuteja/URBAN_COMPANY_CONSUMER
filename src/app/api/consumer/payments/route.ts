@@ -3,10 +3,13 @@ import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
 import Payment from "@/database/paymentModel";
 import Booking from "@/database/bookingModel";
-import { Types } from "mongoose";
+import { Types, startSession } from "mongoose";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   await connectDb();
+  const session = await startSession();
+  session.startTransaction();
   try {
     const middlewareResponse = await consumerMiddleware(req);
     if (middlewareResponse instanceof NextResponse) {
@@ -15,7 +18,10 @@ export async function POST(req: NextRequest) {
     const userId = middlewareResponse.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found" }, { status: 401 });
+      return NextResponse.json(
+        { message: "User ID not found" },
+        { status: 401 }
+      );
     }
 
     const {
@@ -25,6 +31,7 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       paymentStatus,
       transactionId,
+      razorpayResponse,
     } = await req.json();
 
     const newPayment = new Payment({
@@ -36,17 +43,25 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       paymentStatus,
       transactionId,
+      razorpayResponse,
     });
 
-    await newPayment.save();
+    await newPayment.save({ session });
 
-    await Booking.updateMany({ orderId }, {
-      $set: { bookingStatus: "confirmed" },
-    });
-
+    await Booking.updateMany(
+      { orderId },
+      {
+        $set: { bookingStatus: "confirmed" },
+      },
+      { session }
+    );
+    await session.commitTransaction();
+    session.endSession();
     return NextResponse.json(newPayment, { status: 201 });
   } catch (error: any) {
-    console.error("Payment creation error:", error);
+    await session.abortTransaction();
+    session.endSession();
+    logger.error("Payment creation error:", error);
     return NextResponse.json(
       { message: error.message || "Failed to create payment" },
       { status: 500 }

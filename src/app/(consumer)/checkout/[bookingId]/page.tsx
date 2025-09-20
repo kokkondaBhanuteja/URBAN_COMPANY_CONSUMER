@@ -88,6 +88,7 @@ export default function CheckoutPage() {
           paymentMethod: paymentDetails.method || 'online',
           paymentStatus: "successful",
           transactionId: result.paymentId,
+          razorpayResponse: paymentDetails,
         }),
       })
 

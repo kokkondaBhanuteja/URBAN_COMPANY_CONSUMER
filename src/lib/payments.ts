@@ -5,6 +5,7 @@ export interface PaymentResult {
   orderId?: string;
   signature?: string;
   error?: string;
+  razorpayResponse?: any; // Added to hold the full response
 }
 
 export interface PaymentOptions {
@@ -99,10 +100,7 @@ export async function openRazorpayCheckout(
     };
   }
   
-  // --- FIX START ---
-  // The API returns the order object directly, so we don't need to destructure it.
   const order = await orderResponse.json();
-  // --- FIX END ---
 
 
   return new Promise((resolve) => {
@@ -134,6 +132,7 @@ export async function openRazorpayCheckout(
           paymentId: response.razorpay_payment_id,
           orderId: response.razorpay_order_id,
           signature: response.razorpay_signature,
+          razorpayResponse: response, // Include the full response
         });
       },
     };
@@ -145,6 +144,7 @@ export async function openRazorpayCheckout(
       resolve({
         success: false,
         error: response.error.description || "Payment failed",
+        razorpayResponse: response, // Include the full response on failure too
       });
     });
 

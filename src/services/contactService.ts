@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
+import logger from "@/lib/logger";
 
-// Re-use your email configuration from your environment variables
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -21,7 +21,7 @@ export const sendContactMessage = async (formData: ContactFormData) => {
 
   const mailOptions = {
     from: process.env.GMAIL_USER,
-    to: "resolve@urbancompany.com", // Your support email address
+    to: "resolve@urbancompany.com",
     subject: `New Contact Message from ${name}`,
     replyTo: email,
     html: `
@@ -42,9 +42,10 @@ export const sendContactMessage = async (formData: ContactFormData) => {
 
   try {
     await transporter.sendMail(mailOptions);
+    logger.info(`Contact message sent from ${email}`);
     return { success: true, message: "Message sent successfully!" };
   } catch (error) {
-    console.error("Error sending contact email:", error);
+    logger.error("Error sending contact email:", error);
     throw new Error("Failed to send message. Please try again later.");
   }
 };

@@ -3,6 +3,7 @@ import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
 import Booking from "@/database/bookingModel";
 import { Types } from "mongoose";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest, { params }: { params: { bookingId: string } }) {
   await connectDb();
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { bookingId: s
 
     return NextResponse.json(booking);
   } catch (error: any) {
-    console.error("Booking fetch error:", error);
+    logger.error("Single booking fetch error:", error);
     return NextResponse.json({ message: error.message || "Failed to fetch booking" }, { status: 500 });
   }
 }

@@ -4,13 +4,16 @@ import Booking from "@/database/bookingModel";
 import Provider from "@/database/ProviderModel";
 import { IBooking } from "@/database/bookingModel";
 import { IProvider } from "@/database/ProviderModel";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
+import logger from "@/lib/logger";
+
+// ... (findAvailableProviders and rankProviders functions remain the same)
 
 async function findAvailableProviders(booking: IBooking, excludedProviderIds: string[] = []): Promise<IProvider[]> {
     const { serviceId, serviceAddress, scheduledAt } = booking;
 
     const potentialProviders = await Provider.find({
-        _id: { $nin: excludedProviderIds }, // Exclude already assigned providers
+        _id: { $nin: excludedProviderIds },
         servicesOffered: serviceId,
         serviceableLocations: { $regex: new RegExp(serviceAddress.city, "i") },
         isActive: true,
@@ -64,11 +67,10 @@ export async function assignProviderToBooking(bookingId: string, excludedProvide
     }
 
     if (booking.providerId || (booking.bookingStatus !== 'requested' && booking.bookingStatus !== 'confirmed')) {
-        console.warn(`Booking ${bookingId} is not in a 'requested' or 'confirmed' state. Current state: ${booking.bookingStatus}`);
+        logger.warn(`Booking ${bookingId} is not in a 'requested' or 'confirmed' state.`, { status: booking.bookingStatus });
         return;
     }
 
-    // Check if a provider is already assigned to another booking in the same order
     const existingBookingInOrder = await Booking.findOne({
         orderId: booking.orderId,
         providerId: { $exists: true, $ne: null }
@@ -86,26 +88,25 @@ export async function assignProviderToBooking(bookingId: string, excludedProvide
     if (!bestProvider) {
         const availableProviders = await findAvailableProviders(booking, excludedProviderIds);
         if (availableProviders.length === 0) {
-            console.warn(`No new available providers found for booking: ${bookingId}`);
+            logger.warn(`No new available providers found for booking: ${bookingId}`);
             return;
         }
         const rankedProviders = await rankProviders(availableProviders);
         bestProvider = rankedProviders[0];
     }
 
-    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     booking.providerId = bestProvider._id;
     booking.bookingStatus = 'assigned';
-    booking.bookingOtp = otp; // Save OTP to booking
+    booking.bookingOtp = otp;
     await booking.save();
 
-    console.log(`Successfully assigned provider ${bestProvider._id} to booking ${bookingId}`);
+    logger.info(`Successfully assigned provider ${bestProvider._id} to booking ${bookingId}`);
 
     const user = await User.findById(booking.userId);
     if (user) {
-        await sendBookingConfirmationEmail(user, booking); // Pass the whole booking object
+        await sendBookingConfirmationEmail(user, booking);
     }
 
     return booking;

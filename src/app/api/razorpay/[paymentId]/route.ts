@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import logger from "@/lib/logger";
 
 const razorpay = new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -24,7 +25,7 @@ export async function GET(
 
     return NextResponse.json(payment);
   } catch (error) {
-    console.error("Razorpay payment fetch error:", error);
+    logger.error("Razorpay payment fetch error:", error);
     return NextResponse.json(
       { message: "Failed to fetch Razorpay payment details" },
       { status: 500 }

@@ -3,6 +3,7 @@ import { connectDb } from "@/lib/dbConnect";
 import Wallet from "@/database/walletModel";
 import WalletTransaction from "@/database/walletTransactionModel";
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   await connectDb();
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       transactions,
     });
   } catch (error) {
-    console.error("Wallet balance fetch error:", error);
+    logger.error("Wallet balance fetch error:", error);
     return NextResponse.json(
       { message: "Failed to fetch wallet balance" },
       { status: 500 }

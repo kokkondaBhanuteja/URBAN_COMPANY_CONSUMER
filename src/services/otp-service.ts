@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import Otp from "@/database/otpModel";
-
+import logger from "@/lib/logger";
 // This is now the single source of truth for the Nodemailer transporter.
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
  */
 export const sendOtp = async (email: string) => {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.error("Missing Gmail credentials in environment variables.");
+    logger.error("Missing Gmail credentials in environment variables.");
     throw new Error("Server is not configured for sending emails.");
   }
 
@@ -47,6 +47,7 @@ export const sendOtp = async (email: string) => {
   };
 
   await transporter.sendMail(mailOptions);
+  logger.info(`OTP sent to ${email}`);
 };
 
 /**
@@ -60,7 +61,10 @@ export const verifyOtp = async (email: string, otp: string): Promise<boolean> =>
   if (otpRecord) {
     // OTP is correct, delete it so it can't be used again
     await Otp.deleteOne({ _id: otpRecord._id });
+    logger.info(`OTP verified successfully for ${email}`);
+
     return true;
   }
+  logger.warn(`Invalid OTP attempt for ${email}`);
   return false;
 };

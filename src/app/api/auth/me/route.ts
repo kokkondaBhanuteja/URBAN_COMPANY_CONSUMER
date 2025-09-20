@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import jwt from "jsonwebtoken"
 import { connectDb } from "@/lib/dbConnect"
 import User from "@/database/userModel"
+import logger from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   await connectDb()
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
       userType: user.userType,
     })
   } catch (error) {
+    logger.error("Auth 'me' error:", error);
     return NextResponse.json({ message: "Invalid token" }, { status: 401 })
   }
 }

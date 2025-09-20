@@ -1,26 +1,29 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { consumerMiddleware } from "@/middlewares/consumerMiddleware"
-import { connectDb } from "@/lib/dbConnect"
-import Address from "@/database/addressmodel"
-import { Types } from "mongoose"
+import { type NextRequest, NextResponse } from "next/server";
+import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
+import { connectDb } from "@/lib/dbConnect";
+import Address from "@/database/addressmodel";
+import { Types } from "mongoose";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
-  await connectDb()
+  await connectDb();
   try {
-    const middlewareResponse = await consumerMiddleware(req)
+    const middlewareResponse = await consumerMiddleware(req);
     if (middlewareResponse instanceof NextResponse) {
-      return middlewareResponse
+      return middlewareResponse;
     }
-    const userId = middlewareResponse.get("x-user-id")
+    const userId = middlewareResponse.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json({ message: "User ID not found" }, { status: 401 })
+      return NextResponse.json(
+        { message: "User ID not found" },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json()
-    const { addressLine1, city, pincode, state, addressType } = body
+    const body = await req.json();
+    const { addressLine1, city, pincode, state, addressType } = body;
 
-    // FIX: Added the 'country' field which is required by the schema
     const newAddress = new Address({
       userId: new Types.ObjectId(userId),
       addressLine1,
@@ -28,14 +31,17 @@ export async function POST(req: NextRequest) {
       pincode,
       state,
       addressType,
-      country: "India", // Defaulting country to India
-    })
+      country: "India", 
+    });
 
-    await newAddress.save()
+    await newAddress.save();
 
-    return NextResponse.json(newAddress, { status: 201 })
+    return NextResponse.json(newAddress, { status: 201 });
   } catch (error: any) {
-    console.error("Address creation error:", error)
-    return NextResponse.json({ message: error.message || "Failed to create address" }, { status: 500 })
+    logger.error("Address creation error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to create address" },
+      { status: 500 }
+    );
   }
 }

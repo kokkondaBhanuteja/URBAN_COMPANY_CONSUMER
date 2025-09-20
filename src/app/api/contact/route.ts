@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { sendContactMessage } from "@/services/contactService";
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Message sent successfully!" });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    logger.error("Contact form submission error:", error);
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }

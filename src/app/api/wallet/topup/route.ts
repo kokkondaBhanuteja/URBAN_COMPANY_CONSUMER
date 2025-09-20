@@ -1,9 +1,9 @@
-// src/app/api/wallet/topup/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { nanoid } from "nanoid";
 import { consumerMiddleware } from "@/middlewares/consumerMiddleware";
 import { connectDb } from "@/lib/dbConnect";
+import logger from "@/lib/logger";
 
 const razorpay = new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     const middlewareResponse = await consumerMiddleware(req);
     if (middlewareResponse instanceof NextResponse) {
-        return middlewareResponse;
+      return middlewareResponse;
     }
     const userId = middlewareResponse.get("x-user-id");
 
@@ -26,16 +26,16 @@ export async function POST(req: NextRequest) {
       currency: "INR",
       receipt: `receipt_wallet_${nanoid()}`,
       notes: {
-          userId,
-          purpose: "wallet_topup",
-      }
+        userId,
+        purpose: "wallet_topup",
+      },
     };
 
     const order = await razorpay.orders.create(options);
 
-    return NextResponse.json( order );
+    return NextResponse.json(order);
   } catch (error) {
-    console.error("Razorpay wallet topup error:", error);
+    logger.error("Razorpay wallet topup error:", error);
     return NextResponse.json(
       { message: "Failed to create Razorpay order for wallet topup" },
       { status: 500 }
